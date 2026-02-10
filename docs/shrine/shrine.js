@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
 
-console.log("shrine.js loaded OK");
+console.log("SHRINE JS VERSION 999 — IF YOU SEE THIS, YOU UPDATED");
 console.log("VERSION: target18", Date.now());
 
 // ====== CONFIG ======
