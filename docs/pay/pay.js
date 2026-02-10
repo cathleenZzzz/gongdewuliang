@@ -1,131 +1,195 @@
-// docs/pay/pay.js
+// Fortune Terminal — pay.js (no explicit platform / religion text)
 
-const $ = (id) => document.getElementById(id);
+const SUPABASE_URL = "https://gsmkpxxjzrtpdvgocbex.supabase.co";
+const SUPABASE_ANON_KEY = "sb_publishable_bUv7a7CgIOiIMRHjMhIAFg_8W_IHlGw";
 
-const amtGrid = $("amtGrid");
-const customAmt = $("customAmt");
-const nameInput = $("nameInput");
-const phoneInput = $("phoneInput");
-const wishInput = $("wishInput");
-const payBtn = $("payBtn");
-const statusEl = $("status");
-const miniUser = $("miniUser");
-const closeBtn = $("closeBtn");
+// ===== UI refs
+const usernameEl = document.getElementById("username");
+const totalEl = document.getElementById("total");
+const pctEl = document.getElementById("pct");
+const remainingEl = document.getElementById("remaining");
+const fillEl = document.getElementById("fill");
+const statusEl = document.getElementById("status");
 
-const LS_USER = "gongde_user_v2";
+const amountInput = document.getElementById("amountInput");
+const payBtn = document.getElementById("payBtn");
+const maxBtn = document.getElementById("maxBtn");
 
-// ===== Supabase (we'll fill later in Step 5) =====
-const SUPABASE_URL = "https://gsmkpxxjzrtpdvgocbex.supabase.co";      // e.g. "https://xxxx.supabase.co"
-const SUPABASE_ANON_KEY = "sb_publishable_bUv7a7CgIOiIMRHjMhIAFg_8W_IHlGw"; // public anon key
+const modal = document.getElementById("modal");
+const modalBody = document.getElementById("modalBody");
+const modalClose = document.getElementById("modalClose");
+const modalX = document.getElementById("modalX");
+const modalOk = document.getElementById("modalOk");
 
-function makeUser() {
-  const a = Math.random().toString(16).slice(2, 6).toUpperCase();
-  const b = Math.random().toString(16).slice(2, 6).toUpperCase();
-  return `善信_${a}${b}`;
+const pills = Array.from(document.querySelectorAll(".pill"));
+
+const TARGET = 88888;
+
+// ===== identity: NEW every reload
+const username = makeUsername();
+usernameEl.textContent = username;
+
+// ===== progress (session only; reload resets)
+let total = 0;
+renderProgress();
+
+// ===== helpers
+function fmt(n){
+  return Number(n).toLocaleString("en-US");
 }
 
-const username = localStorage.getItem(LS_USER) || makeUser();
-localStorage.setItem(LS_USER, username);
-miniUser.textContent = `匿名用户: ${username}`;
+function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
 
-function setSelectedButton(btn) {
-  document.querySelectorAll(".amt").forEach((b) => b.classList.remove("selected"));
-  if (btn) btn.classList.add("selected");
+function setStatus(msg){
+  statusEl.textContent = msg;
 }
 
-function parseAmount() {
-  const selected = document.querySelector(".amt.selected");
-  const picked = selected?.dataset?.amt ? Number(selected.dataset.amt) : null;
+// ===== username generator (mixed scripts)
+function choice(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
 
-  const custom = Number(String(customAmt.value || "").replace(/[^\d.]/g, ""));
-  const useCustom = Number.isFinite(custom) && custom > 0;
+function makeUsername(){
+  const a = [
+    "Nova","Hyper","Soft","Prime","Ultra","Cloud","Bright","Kind","Meta","Vector","Lumen","Civic","Future","Good","Plus","Zen",
+    "Σ","Λ","Δ","Ψ","Ω","К","Ж","Я"
+  ];
+  const b = [
+    "狐","猫","桃","风","月","光","林","纸","金","银","雨","梦","城","星","桥","云",
+    "さくら","ゆめ","ひかり","まつり",
+    "빛","달","별"
+  ];
+  const c = ["_","-",".","~"];
+  const d = ["01","07","13","21","33","55","88","144","233","404","777","999"];
+  const e = ["🪙","✨","🧧","🌙","🕯️","🫧","🧿"];
 
-  const amt = useCustom ? custom : picked;
-  if (!Number.isFinite(amt) || amt <= 0) return null;
-
-  // clamp to 2 decimals
-  return Math.round(amt * 100) / 100;
+  // e.g. "Lumen猫~88🪙"
+  return `${choice(a)}${choice(b)}${choice(c)}${choice(d)}${(Math.random() < 0.35 ? choice(e) : "")}`;
 }
 
-// button select behavior
-amtGrid.addEventListener("click", (e) => {
-  const btn = e.target.closest(".amt");
-  if (!btn) return;
-  setSelectedButton(btn);
-  // if user clicks a preset, clear custom
-  if (btn.dataset.amt) customAmt.value = "";
-});
-
-// typing custom amount unselects presets
-customAmt.addEventListener("input", () => {
-  if (String(customAmt.value || "").trim().length > 0) {
-    setSelectedButton(null);
-  }
-});
-
-closeBtn?.addEventListener("click", () => {
-  // just a fake close for now
-  statusEl.textContent = "（已关闭弹窗：演示）";
-});
-
-// ===== Post donation (demo now, supabase later) =====
-async function postDonation({ username, amount, name, phone, wish }) {
-  // Demo mode: no backend
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    return { ok: true, mode: "demo" };
-  }
-
-  const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-  const { error } = await supabase.from("donations").insert({
-    username,
-    amount,
-    name,
-    phone,
-    wish,
+// ===== input + presets
+pills.forEach((p) => {
+  p.addEventListener("click", () => {
+    pills.forEach(x => x.classList.remove("active"));
+    p.classList.add("active");
+    amountInput.value = p.dataset.amt;
+    amountInput.focus();
   });
+});
 
-  if (error) return { ok: false, error: error.message };
-  return { ok: true, mode: "supabase" };
+maxBtn.addEventListener("click", () => {
+  // “Max” = remaining to hit target (cap at 99999 to avoid silly huge)
+  const need = clamp(TARGET - total, 0, 99999);
+  amountInput.value = String(need || 0);
+  amountInput.focus();
+});
+
+amountInput.addEventListener("input", () => {
+  // keep numeric only
+  amountInput.value = amountInput.value.replace(/[^\d]/g, "");
+});
+
+function getAmount(){
+  const raw = (amountInput.value || "").trim();
+  if (!raw) return 0;
+  const n = Number(raw);
+  if (!Number.isFinite(n)) return 0;
+  return Math.max(0, Math.floor(n));
 }
 
-// ===== Pay =====
+// ===== modal
+function openModal(text){
+  modalBody.textContent = text;
+  modal.setAttribute("aria-hidden", "false");
+}
+function closeModal(){
+  modal.setAttribute("aria-hidden", "true");
+}
+modalClose.addEventListener("click", () => { closeModal(); resetProgress(); });
+modalX.addEventListener("click", () => { closeModal(); resetProgress(); });
+modalOk.addEventListener("click", () => { closeModal(); resetProgress(); });
+
+function resetProgress(){
+  total = 0;
+  renderProgress();
+  amountInput.value = "";
+  pills.forEach(x => x.classList.remove("active"));
+  setStatus("ready");
+}
+
+// ===== Supabase client (ESM)
+let supabase = null;
+async function getSupabase(){
+  if (supabase) return supabase;
+  const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
+  supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  return supabase;
+}
+
+// ===== pay action
 payBtn.addEventListener("click", async () => {
-  const amount = parseAmount();
-  if (amount == null) {
-    statusEl.textContent = "请选择金额或输入金额。";
+  const amt = getAmount();
+  if (!amt) {
+    setStatus("enter a number");
     return;
   }
-
-  const name = (nameInput.value || "").trim() || username;
-  const phone = (phoneInput.value || "").trim();
-  const wish = (wishInput.value || "").trim();
 
   payBtn.disabled = true;
-  statusEl.textContent = "正在唤起微信支付…（演示）";
+  setStatus("submitting…");
 
-  const res = await postDonation({ username, amount, name, phone, wish });
+  try{
+    // insert to Supabase
+    const sb = await getSupabase();
+    const { error } = await sb.from("donations").insert({
+      name: username,
+      amount: amt
+    });
 
-  if (!res.ok) {
-    statusEl.textContent = `失败：${res.error || "未知错误"}`;
+    if (error) throw error;
+
+    // local progress update
+    total += amt;
+    renderProgress();
+
+    // broadcast to shrine same-device (optional)
+    if ("BroadcastChannel" in window) {
+      const ch = new BroadcastChannel("gongde");
+      ch.postMessage({ type: "donation", username, amount: String(amt) });
+      ch.close();
+    }
+
+    setStatus("accepted");
+
+    // threshold
+    if (total >= TARGET) {
+      openModal(
+        "Your trajectory has been upgraded. Expect smoother decisions, higher-quality outcomes, and a more optimized tomorrow. " +
+        "Continue to align with beneficial systems."
+      );
+      // (reset happens on close)
+    }
+
+    amountInput.value = "";
+    pills.forEach(x => x.classList.remove("active"));
+  } catch (e){
+    console.error(e);
+    setStatus("error — try again");
+  } finally {
     payBtn.disabled = false;
-    return;
   }
+});
 
-  statusEl.textContent =
-    res.mode === "supabase"
-      ? "支付成功。功德已记录，将显像于主殿。"
-      : "支付成功（演示模式）。已向主殿广播。";
+function renderProgress(){
+  totalEl.textContent = fmt(total);
 
-  // Local broadcast (for testing): shrine listens on "gongde"
-  if ("BroadcastChannel" in window) {
-    const chan = new BroadcastChannel("gongde");
-    chan.postMessage({ type: "donation", username: name, amount });
-    chan.close();
-  }
+  const pct = clamp((total / TARGET) * 100, 0, 100);
+  pctEl.textContent = String(Math.floor(pct));
+  fillEl.style.width = `${pct}%`;
 
-  setTimeout(() => {
-    payBtn.disabled = false;
-  }, 700);
+  const remaining = Math.max(0, TARGET - total);
+  remainingEl.textContent = fmt(remaining);
+}
+
+// optional back/info buttons (no navigation assumptions)
+document.getElementById("backBtn")?.addEventListener("click", () => history.back());
+document.getElementById("warnBtn")?.addEventListener("click", () => {
+  openModal("This terminal improves your outlook through consistent micro-commitments. Results may feel immediate.");
 });
