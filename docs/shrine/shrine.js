@@ -2,7 +2,8 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
 
-console.log("SHRINE JS — CENTERED + HUGE", Date.now());
+console.log("shrine.js loaded OK");
+console.log("VERSION: centered-nudge", Date.now());
 
 // ====== CONFIG ======
 const BASE = "/gongdewuliang";
@@ -16,8 +17,13 @@ const PATHS = {
   metallic: `${MODEL_DIR}texture_metallic.png`,
 };
 
-// Where the statue should “stand” (top surface of pedestal)
+// Put the statue "feet" on top of the pedestal.
+// Your pedestal top is ~0.45 (cylinder height 0.45, centered at y=0.22)
 const PEDESTAL_TOP_Y = 0.45;
+
+// Manual nudges (edit these after you see it)
+const NUDGE_X = 0.0;   // + moves right, - moves left
+const NUDGE_Z = 0.0;   // + moves toward camera, - moves away
 
 // ====== DOM ======
 const canvas = document.getElementById("scene");
@@ -38,20 +44,17 @@ camera.position.set(0, 6.0, 32.0);
 
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
-controls.target.set(0, 1.0, 0);
+controls.target.set(0, 6.0, 0);
 controls.update();
 
-// ---- Lights (simple + stable) ----
+// ---- Lights (stable) ----
 scene.add(new THREE.AmbientLight(0xffffff, 0.25));
-
 const key = new THREE.DirectionalLight(0xffffff, 1.1);
 key.position.set(3, 5, 2);
 scene.add(key);
-
 const fill = new THREE.DirectionalLight(0xb7c9ff, 0.35);
 fill.position.set(-3, 2, -2);
 scene.add(fill);
-
 const candle = new THREE.PointLight(0xffb07a, 0.25, 14);
 candle.position.set(0.0, 1.2, 1.2);
 scene.add(candle);
@@ -121,7 +124,6 @@ let godObj = null;
 objLoader.load(
   PATHS.obj,
   (obj) => {
-    // Apply material + ensure normals
     obj.traverse((child) => {
       if (child && child.isMesh) {
         child.material = godMaterial;
@@ -129,38 +131,38 @@ objLoader.load(
       }
     });
 
-    // Compute bounds BEFORE scaling/positioning
+    // Bounds before scaling
     const box = new THREE.Box3().setFromObject(obj);
     const size = new THREE.Vector3();
     box.getSize(size);
     const center = new THREE.Vector3();
     box.getCenter(center);
 
-    console.log(
-      "[obj] bbox size:",
-      size.x, size.y, size.z,
-      "center:",
-      center.x, center.y, center.z
-    );
+    console.log("[obj] bbox size:", size.x, size.y, size.z, "center:", center.x, center.y, center.z);
 
-    // Center horizontally (X/Z) using bbox center
+    // Center X/Z around origin (remove bbox center)
     obj.position.x -= center.x;
     obj.position.z -= center.z;
 
-    // Scale huge based on max dimension
+    // Scale huge
     const maxDim = Math.max(size.x, size.y, size.z) || 1;
-    const target = 18.0; // HUGE
+    const target = 18.0;
     const s = target / maxDim;
     obj.scale.setScalar(s);
 
-    // Recompute bounds AFTER scaling & X/Z centering (for accurate foot placement)
+    console.log("[obj] SCALE APPLIED:", s, "target:", target, "maxDim:", maxDim);
+
+    // Recompute bounds AFTER scaling & X/Z center so we can plant feet
     const box2 = new THREE.Box3().setFromObject(obj);
     const minY = box2.min.y;
 
-    // Plant the base on top of pedestal
+    // Plant the base on the pedestal top
     obj.position.y += (PEDESTAL_TOP_Y - minY);
 
-    // Optional: face forward
+    // Manual nudges (for “visual center”)
+    obj.position.x += NUDGE_X;
+    obj.position.z += NUDGE_Z;
+
     obj.rotation.y = Math.PI;
 
     scene.add(obj);
@@ -168,12 +170,12 @@ objLoader.load(
 
     // Force consistent view
     controls.reset();
-    controls.target.set(0, 6.0, 0);
+    controls.target.set(0 + NUDGE_X, 6.0, 0 + NUDGE_Z);
     camera.position.set(0, 10.0, 40.0);
-    camera.lookAt(0, 6.0, 0);
+    camera.lookAt(controls.target);
     controls.update();
 
-    console.log("[obj] loaded + centered + planted:", PATHS.obj);
+    console.log("[obj] loaded + centered-ish:", PATHS.obj);
   },
   undefined,
   (err) => console.error("[obj] FAILED:", err)
@@ -230,12 +232,7 @@ document.getElementById("test-donate").addEventListener("click", () => {
 // ====== RENDER LOOP ======
 renderer.setAnimationLoop(() => {
   controls.update();
-
-  // gentle rotation
   if (godObj) godObj.rotation.y += 0.0012;
-
-  // subtle flicker
   candle.intensity = 0.22 + Math.random() * 0.08;
-
   renderer.render(scene, camera);
 });
