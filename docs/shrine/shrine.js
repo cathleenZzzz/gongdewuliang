@@ -151,7 +151,7 @@ objLoader.load(
     controls.update();
 
     // ✅ Pull camera back so the big model fits
-    camera.position.set(0, 2.2, 14.0);
+    camera.position.set(0, 4.0, 30.0);
     camera.lookAt(0, 1.0, 0);
 
     console.log("[obj] loaded + BIG:", PATHS.obj);
