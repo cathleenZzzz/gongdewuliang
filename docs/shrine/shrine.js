@@ -138,7 +138,7 @@ objLoader.load(
     const maxDim = Math.max(size.x, size.y, size.z);
 
     // ✅ MAKE IT WAY BIGGER
-    const target = 6.0; // was 1.4
+    const target = 10.0; // was 1.4
     const s = target / (maxDim || 1);
     obj.scale.setScalar(s);
 
@@ -151,7 +151,7 @@ objLoader.load(
     controls.update();
 
     // ✅ Pull camera back so the big model fits
-    camera.position.set(0, 1.4, 9.0);
+    camera.position.set(0, 2.2, 14.0);
     camera.lookAt(0, 1.0, 0);
 
     console.log("[obj] loaded + BIG:", PATHS.obj);
