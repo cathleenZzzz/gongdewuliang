@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>QR Generator</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial;margin:0;padding:20px;background:#fff;}
+    .wrap{max-width:520px;margin:0 auto;display:grid;gap:12px}
+    input{padding:12px 10px;border:1px solid rgba(0,0,0,.15);border-radius:12px;font-size:16px}
+    button{padding:12px 10px;border:0;border-radius:12px;background:#111;color:#fff;font-weight:650;cursor:pointer}
+    #qr{display:grid;place-items:center;padding:18px;border:1px solid rgba(0,0,0,.10);border-radius:16px}
+    .hint{opacity:.65;font-size:12px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h2 style="margin:0">QR Generator</h2>
+    <div class="hint">Enter a URL → generates a QR you can screenshot/print.</div>
+
+    <input id="url" value="https://cathleenzzzz.github.io/gongdewuliang/pay/" />
+    <button id="make">Generate</button>
+
+    <div id="qr"></div>
+
+    <div class="hint">Tip: after generating, long-press on phone to save image (or just screenshot).</div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
+  <script>
+    const urlEl = document.getElementById("url");
+    const qrEl = document.getElementById("qr");
+    let qr = null;
+
+    function render() {
+      qrEl.innerHTML = "";
+      qr = new QRCode(qrEl, {
+        text: urlEl.value.trim(),
+        width: 280,
+        height: 280,
+        correctLevel: QRCode.CorrectLevel.M
+      });
+    }
+
+    document.getElementById("make").addEventListener("click", render);
+    render();
+  </script>
+</body>
+</html>
