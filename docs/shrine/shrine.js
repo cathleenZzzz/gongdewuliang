@@ -27,7 +27,7 @@ const WALL = {
   cols: 14,
   rows: 7,
   spacingX: 5.0,
-  spacingY: 3.0,
+  spacingY: 4.5,
   z: -36.0,
   y0: 1.2,
 };
