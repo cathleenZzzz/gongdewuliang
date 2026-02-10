@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
 
-console.log("SHRINE JS — camera orbit + 3D donation wall", Date.now());
+console.log("SHRINE JS — rotate main + solid mini wall", Date.now());
 
 // ====== CONFIG ======
 const BASE = "/gongdewuliang";
@@ -16,21 +16,22 @@ const PATHS = {
   metallic: `${MODEL_DIR}texture_metallic.png`,
 };
 
-const BLESS_MS = 60_000;      // each small idol lasts 1 minute
-const FADE_MS = 6_000;        // fade during last 6 seconds (set to 0 for instant vanish)
+const BLESS_MS = 60_000;  // minis last 1 minute
+const FADE_MS = 5000;     // fade over last 5s (set 0 for instant vanish)
 
+// Wall layout (spread out + behind main)
 const WALL = {
-  cols: 24,
-  rows: 12,
-  spacingX: 1.25,
-  spacingY: 1.15,
-  z: -18.0,        // behind main idol
-  y0: 0.6,         // start height
+  cols: 18,
+  rows: 10,
+  spacingX: 2.1,     // <-- bigger spacing (fix overlap)
+  spacingY: 2.0,
+  z: -36.0,          // <-- push further back (fix messy rendering)
+  y0: 1.2,
 };
 
-const CAMERA = {
-  autoSpeed: 0.22,       // radians/sec
-  pauseAfterInputMs: 3500,
+const MAIN = {
+  targetSize: 18.0,   // main idol scale target
+  rotateSpeed: 0.55,  // radians/sec (main rotates, not camera)
 };
 
 // ====== DOM ======
@@ -51,15 +52,19 @@ function speak(text) {
 const renderer = new THREE.WebGLRenderer({
   canvas,
   antialias: true,
-  alpha: true, // keep transparent so your white page / wall shows through
+  alpha: true, // transparent so page background shows through
 });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.0;
+renderer.toneMappingExposure = 1.05;
 
 const scene = new THREE.Scene();
 scene.background = null;
+
+// IMPORTANT: disable sorting artifacts for lots of transparent stuff
+// (we’ll only turn transparent on during fade)
+renderer.sortObjects = true;
 
 const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 5000);
 camera.position.set(0, 11.0, 46.0);
@@ -70,11 +75,13 @@ controls.enablePan = false;
 controls.target.set(0, 8.0, 0);
 controls.update();
 
-// Warm-ish lights
+// Lights (slightly warm)
 scene.add(new THREE.AmbientLight(0xffffff, 0.62));
+
 const warmKey = new THREE.DirectionalLight(0xfff1dd, 1.05);
 warmKey.position.set(6, 10, 8);
 scene.add(warmKey);
+
 const fill = new THREE.DirectionalLight(0xeaf0ff, 0.25);
 fill.position.set(-7, 6, -7);
 scene.add(fill);
@@ -100,50 +107,51 @@ const normalMap = loadTex(PATHS.normal);
 const roughnessMap = loadTex(PATHS.roughness);
 const metalnessMap = loadTex(PATHS.metallic);
 
-// Main idol material (your textured look)
+// Main idol material (your texture set)
 const mainMat = new THREE.MeshStandardMaterial({
   map: diffuseMap,
   normalMap,
   roughnessMap,
   metalnessMap,
-  roughness: 0.9,
-  metalness: 0.05,
+  roughness: 0.85,
+  metalness: 0.08,
 });
 
-// Donation mini idols: bright/glowy, warm-ish
-function makeMiniMaterialFrom(baseMat) {
-  const m = baseMat.clone();
-  m.transparent = true;
+// Mini idol material: SOLID gold-ish, not pastel
+function makeMiniMaterial() {
+  const m = new THREE.MeshStandardMaterial({
+    color: 0xffe3b0,              // warm “gold”
+    metalness: 0.65,
+    roughness: 0.35,
+    emissive: new THREE.Color(0x2a1a08), // tiny warmth (not pastel wash)
+    emissiveIntensity: 0.15,
+  });
+  // start fully opaque
+  m.transparent = false;
   m.opacity = 1;
-  m.emissive = new THREE.Color(0xfff3e5);
-  m.emissiveIntensity = 0.9;
-  m.metalness = 0.02;
-  m.roughness = 0.55;
   return m;
 }
 
 const objLoader = new OBJLoader(manager);
 let godObj = null;
-let godTemplate = null; // used to clone minis
+let godTemplate = null; // clone source for minis
 let mainScale = 1;
 
-// Mini idol pool
-const minis = []; // { group, createdAt, expiresAt, username, amount }
+// Queue donations until model is loaded
+const pendingDonations = [];
+
+// Mini pool
+const minis = []; // { group, createdAt, expiresAt }
 let nextMiniIndex = 0;
 
 function cloneAsMini(templateGroup) {
   const clone = templateGroup.clone(true);
-
-  // IMPORTANT: give each mesh its own material instance so opacity fades per-mini
   clone.traverse((child) => {
     if (child && child.isMesh) {
-      child.material = makeMiniMaterialFrom(mainMat);
-      child.castShadow = false;
-      child.receiveShadow = false;
+      child.material = makeMiniMaterial(); // per-mesh material, allows fade later
       if (child.geometry) child.geometry.computeVertexNormals();
     }
   });
-
   return clone;
 }
 
@@ -158,27 +166,38 @@ function placeMiniInGrid(miniGroup, index) {
 
   miniGroup.position.set(x, y, z);
 
-  // small random facing so it’s not too perfect
-  miniGroup.rotation.y = Math.PI + (Math.random() - 0.5) * 0.25;
+  // Keep them upright; small random yaw is ok
+  miniGroup.rotation.set(0, Math.PI + (Math.random() - 0.5) * 0.18, 0);
 }
 
 function setGroupOpacity(group, alpha) {
   group.traverse((child) => {
     if (child && child.isMesh && child.material) {
-      child.material.transparent = true;
-      child.material.opacity = alpha;
+      // Only enable transparency during fade window (prevents “pastel” look)
+      if (alpha >= 0.999) {
+        child.material.transparent = false;
+        child.material.opacity = 1;
+      } else {
+        child.material.transparent = true;
+        child.material.opacity = alpha;
+        child.material.depthWrite = false; // helps avoid ugly sorting artifacts
+      }
       child.material.needsUpdate = true;
     }
   });
 }
 
 function spawnMini({ username, amount }) {
-  if (!godTemplate) return;
+  if (!godTemplate) {
+    // model not ready yet — queue it
+    pendingDonations.push({ username, amount });
+    return;
+  }
 
   const mini = cloneAsMini(godTemplate);
 
-  // scale: relative to main idol size
-  const miniScale = mainScale * 0.18; // tweak if you want smaller/larger
+  // Scale minis relative to main
+  const miniScale = mainScale * 0.16; // smaller, cleaner
   mini.scale.setScalar(miniScale);
 
   placeMiniInGrid(mini, nextMiniIndex++);
@@ -186,46 +205,9 @@ function spawnMini({ username, amount }) {
 
   const createdAt = Date.now();
   const expiresAt = createdAt + BLESS_MS;
+  minis.push({ group: mini, createdAt, expiresAt });
 
-  minis.push({ group: mini, createdAt, expiresAt, username, amount });
-
-  // voice
   speak(`感谢善信 ${username}，供奉 ${amount} 元。功德无量。`);
-}
-
-// ====== CAMERA AUTO-ROTATION (instead of idol rotation) ======
-const clock = new THREE.Clock();
-let autoAngle = 0;
-
-// Pause auto-rotate briefly after user interacts
-let autoPauseUntil = 0;
-function pauseAutoRotate() {
-  autoPauseUntil = Date.now() + CAMERA.pauseAfterInputMs;
-}
-
-// Track user input on canvas
-canvas.addEventListener("pointerdown", pauseAutoRotate);
-canvas.addEventListener("wheel", pauseAutoRotate, { passive: true });
-canvas.addEventListener("touchstart", pauseAutoRotate, { passive: true });
-
-function autoRotateCamera(dt) {
-  if (Date.now() < autoPauseUntil) return;
-
-  const target = controls.target;
-
-  // Keep current radius + height, just orbit around Y
-  const dx = camera.position.x - target.x;
-  const dz = camera.position.z - target.z;
-  const radius = Math.max(0.001, Math.hypot(dx, dz));
-  const y = camera.position.y;
-
-  autoAngle += dt * CAMERA.autoSpeed;
-
-  camera.position.x = target.x + Math.sin(autoAngle) * radius;
-  camera.position.z = target.z + Math.cos(autoAngle) * radius;
-  camera.position.y = y;
-
-  camera.lookAt(target);
 }
 
 // ====== LOAD MAIN OBJ ======
@@ -250,7 +232,7 @@ objLoader.load(
     obj.position.z -= center.z;
 
     const maxDim = Math.max(size.x, size.y, size.z) || 1;
-    mainScale = 18.0 / maxDim;
+    mainScale = MAIN.targetSize / maxDim;
     obj.scale.setScalar(mainScale);
 
     const box2 = new THREE.Box3().setFromObject(obj);
@@ -261,22 +243,16 @@ objLoader.load(
     scene.add(obj);
     godObj = obj;
 
-    // Save template for mini clones (clone from the already-centered OBJ)
+    // Template for minis: clone the centered/scaled OBJ BEFORE placing minis
+    // (We clone the unscaled version and then scale minis separately)
+    // Better: clone AFTER centering but BEFORE scaling:
+    // We'll just clone this object and reset scale in mini spawn.
     godTemplate = obj.clone(true);
+    // Remove from template any heavy transforms that might double-apply:
+    // We'll keep it as-is and apply mini.scale anyway.
 
-    // Reset camera view nicely + initialize autoAngle to current camera angle
-    controls.reset();
-    controls.target.set(0, 8.0, 0);
-    camera.position.set(0, 11.0, 46.0);
-    camera.lookAt(controls.target);
-    controls.update();
-
-    // compute initial autoAngle from camera position
-    {
-      const dx = camera.position.x - controls.target.x;
-      const dz = camera.position.z - controls.target.z;
-      autoAngle = Math.atan2(dx, dz);
-    }
+    // Flush queued donations
+    while (pendingDonations.length) spawnMini(pendingDonations.shift());
 
     console.log("[obj] loaded main idol + template:", PATHS.obj);
   },
@@ -284,7 +260,7 @@ objLoader.load(
   (err) => console.error("[obj] FAILED:", err)
 );
 
-// ====== DONATION HOOKS ======
+// ====== Donation hooks ======
 window.gongdeDonate = function gongdeDonate({ username, amount }) {
   spawnMini({ username: String(username), amount: String(amount) });
 };
@@ -301,7 +277,6 @@ if (chan) {
   };
 }
 
-// Test button -> makes a new mini idol
 testBtn?.addEventListener("click", () => {
   const username = "善信_" + Math.random().toString(16).slice(2, 6).toUpperCase();
   const amount = (Math.random() * 90 + 1).toFixed(2);
@@ -319,22 +294,24 @@ function resize() {
 window.addEventListener("resize", resize);
 resize();
 
-// ====== RENDER LOOP ======
+// ====== Render loop ======
+const clock = new THREE.Clock();
+
 renderer.setAnimationLoop(() => {
   const dt = clock.getDelta();
 
-  // Let user orbit freely, but also auto-orbit camera when idle
   controls.update();
-  autoRotateCamera(dt);
 
-  // Fade & remove expired minis
+  // ✅ rotate MAIN idol (not camera)
+  if (godObj) godObj.rotation.y += dt * MAIN.rotateSpeed;
+
+  // Fade + remove minis
   const t = Date.now();
   for (let i = minis.length - 1; i >= 0; i--) {
     const m = minis[i];
     const remaining = m.expiresAt - t;
 
     if (remaining <= 0) {
-      // remove immediately at end
       scene.remove(m.group);
       minis.splice(i, 1);
       continue;
@@ -343,6 +320,9 @@ renderer.setAnimationLoop(() => {
     if (FADE_MS > 0 && remaining < FADE_MS) {
       const alpha = THREE.MathUtils.clamp(remaining / FADE_MS, 0, 1);
       setGroupOpacity(m.group, alpha);
+    } else {
+      // keep fully solid outside fade window
+      setGroupOpacity(m.group, 1);
     }
   }
 
