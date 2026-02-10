@@ -108,4 +108,124 @@ function safeLoadTexture(url, { srgb = false } = {}) {
       url,
       () => console.log("[tex] ok:", url),
       undefined,
-      () => console.warn("[tex] miss
+      () => console.warn("[tex] missing:", url)
+    );
+    if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+    return t;
+  } catch (e) {
+    console.warn("[tex] exception:", url, e);
+    return null;
+  }
+}
+
+const diffuseMap = safeLoadTexture(PATHS.diffuse, { srgb: true });
+const normalMap = safeLoadTexture(PATHS.normal);
+const roughnessMap = safeLoadTexture(PATHS.roughness);
+const metalnessMap = safeLoadTexture(PATHS.metallic);
+
+const godMaterial = new THREE.MeshStandardMaterial({
+  map: diffuseMap || null,
+  normalMap: normalMap || null,
+  roughnessMap: roughnessMap || null,
+  metalnessMap: metalnessMap || null,
+  roughness: 1.0,
+  metalness: 0.0,
+});
+
+const objLoader = new OBJLoader(manager);
+
+let godObj = null;
+
+objLoader.load(
+  PATHS.obj,
+  (obj) => {
+    godObj = obj;
+
+    obj.traverse((child) => {
+      if (child.isMesh) {
+        child.material = godMaterial;
+      }
+    });
+
+    // Scale + position: OBJ often comes in huge
+    obj.scale.setScalar(0.01);
+    obj.position.set(0, 0.45, 0);
+
+    // If it faces backwards, rotate:
+    obj.rotation.y = Math.PI;
+
+    scene.add(obj);
+    console.log("[obj] loaded:", PATHS.obj);
+  },
+  undefined,
+  (err) => {
+    console.error("[obj] FAILED to load:", PATHS.obj, err);
+  }
+);
+
+// ====== Donation wall ======
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+  }[c]));
+}
+
+function spawnBlessingTile({ username, amount }) {
+  const tile = document.createElement("div");
+  tile.className = "tile";
+  tile.innerHTML =
+    `<div class="glow"></div><div class="name">${escapeHtml(username)} · ¥${amount}</div>`;
+  tilesEl.prepend(tile);
+
+  setTimeout(() => {
+    tile.style.transition = "opacity 600ms ease, transform 600ms ease";
+    tile.style.opacity = "0";
+    tile.style.transform = "scale(0.9)";
+    setTimeout(() => tile.remove(), 650);
+  }, 60_000);
+}
+
+// ====== Speech ======
+let speechEnabled = false;
+document.getElementById("enable-audio").addEventListener("click", () => {
+  speechEnabled = true;
+  speak("功德系统已启动。欢迎供奉。");
+});
+
+function speak(text) {
+  if (!speechEnabled || !("speechSynthesis" in window)) return;
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 1.02;
+  u.pitch = 0.7;
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+
+function onDonationEvent({ username, amount }) {
+  spawnBlessingTile({ username, amount });
+  speak(`感谢善信 ${username}，供奉 ${amount} 元。功德无量，福报增长。`);
+}
+
+// Debug button
+document.getElementById("test-donate").addEventListener("click", () => {
+  const username = "善信_" + Math.random().toString(16).slice(2, 6).toUpperCase();
+  const amount = (Math.random() * 90 + 1).toFixed(2);
+  onDonationEvent({ username, amount });
+});
+
+// ====== Render loop ======
+renderer.setAnimationLoop(() => {
+  controls.update();
+
+  // Gentle idle rotation
+  if (godObj) godObj.rotation.y += 0.0012;
+
+  // Candle flicker
+  candle.intensity = 0.55 + Math.random() * 0.12;
+
+  renderer.render(scene, camera);
+});
+
+// ====== Later: realtime SSE hookup ======
+// const es = new EventSource("https://YOUR_BACKEND/events");
+// es.onmessage = (e) => onDonationEvent(JSON.parse(e.data));
