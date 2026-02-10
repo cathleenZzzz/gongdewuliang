@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1, viewport-fit=cover" />
   <title>Fortune Terminal</title>
-  <link rel="stylesheet" href="./pay.css?v=flat1" />
+  <link rel="stylesheet" href="./pay.css?v=redbox9" />
 </head>
 <body>
   <div class="phone">
@@ -77,19 +77,12 @@
     </main>
   </div>
 
-  <!-- modal -->
+  <!-- REDBOX modal shell ONLY (content + close button injected by pay.js) -->
   <div class="modal" id="modal" aria-hidden="true">
-    <div class="modalBackdrop" id="modalClose"></div>
-    <div class="modalCard">
-      <div class="modalHeader">
-        <div class="modalTitle">Outcome Update</div>
-        <button class="icon" id="modalX" aria-label="Close">×</button>
-      </div>
-      <div class="modalBody" id="modalBody">—</div>
-      <button class="modalBtn" id="modalOk">Continue</button>
-    </div>
+    <div class="modalBackdrop" id="modalClose" aria-label="Close"></div>
+    <div class="modalBody" id="modalBody"></div>
   </div>
 
-  <script type="module" src="./pay.js?v=flat1"></script>
+  <script type="module" src="./pay.js?v=redbox9"></script>
 </body>
 </html>
