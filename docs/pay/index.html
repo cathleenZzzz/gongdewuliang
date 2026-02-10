@@ -1,65 +1,64 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
-  <title>功德 Pay</title>
+  <title>功德支付</title>
   <link rel="stylesheet" href="./pay.css" />
 </head>
 <body>
-  <div id="phone">
-    <header id="topbar">
-      <div class="brand">功德支付</div>
-      <div class="sub">Temple Wallet · 终端</div>
-    </header>
-
-    <main id="screen">
-      <section class="card">
-        <div class="row">
-          <div class="label">用户</div>
-          <div id="user" class="value mono">—</div>
-        </div>
-        <div class="row">
-          <div class="label">余额</div>
-          <div id="balance" class="value mono">¥ 10,000.00</div>
-        </div>
-      </section>
-
-      <section class="card">
-        <div class="title">供奉金额</div>
-        <div class="inputWrap">
-          <span class="yen">¥</span>
-          <input id="amount" inputmode="decimal" placeholder="例如 6 / 18 / 88 / 666" />
-        </div>
-
-        <div class="quick">
-          <button class="q" data-amt="6">6</button>
-          <button class="q" data-amt="18">18</button>
-          <button class="q" data-amt="88">88</button>
-          <button class="q" data-amt="666">666</button>
-        </div>
-
-        <button id="donate" class="primary">确认供奉</button>
-        <div id="status" class="status"></div>
-      </section>
-
-      <section class="hint">
-        扫码即匿名。供奉后将获得 <b>功德</b> 并在主殿显像 60 秒。
-      </section>
-    </main>
+  <!-- background content (faded, like screenshot) -->
+  <div class="bg">
+    <div class="bg-title">一片瓦，三世缘</div>
+    <div class="bg-text">
+      信众布施寺院的每一块砖瓦，我寺会在认捐的瓦片上篆写其功德芳名，
+      您的名字将被留在这座辉煌的圣殿上，接纳日月，沐浴风雨。
+    </div>
   </div>
 
-  <!-- Ad modal -->
-  <div id="adModal" class="modal hidden" role="dialog" aria-modal="true">
-    <div class="modalCard">
-      <div class="adTitle">功德推广 · 限时优惠</div>
-      <div class="adBody">
-        <div class="adLine">今日供奉加赠：电子香火 +1</div>
-        <div class="adLine">开光会员：免广告（暂未开通）</div>
-        <div class="adLine tiny mono">* 未供奉用户将每 10–20 秒收到一次提示</div>
+  <!-- modal sheet -->
+  <div class="sheet">
+    <button class="close" id="closeBtn" aria-label="close">×</button>
+
+    <div class="section">
+      <div class="label">护持金额：</div>
+      <div class="amt-grid" id="amtGrid">
+        <button class="amt selected" data-amt="108">108元</button>
+        <button class="amt" data-amt="188">188元</button>
+        <button class="amt" data-amt="388">388元</button>
+        <button class="amt" data-amt="688">688元</button>
+        <button class="amt" data-amt="888">888元</button>
+
+        <div class="amt custom">
+          <input id="customAmt" inputmode="decimal" placeholder="护持1000元，寺院刻碑留名。" />
+        </div>
       </div>
-      <button id="closeAd" class="ghost">我知道了</button>
     </div>
+
+    <div class="section">
+      <div class="label">联系信息：</div>
+      <input id="nameInput" class="field" placeholder="功德芳名" />
+      <input id="phoneInput" class="field" inputmode="tel" placeholder="联系电话" />
+      <div class="hint">
+        请填写可以联系的手机号，寺院会在 3–7 天将您名字写在琉璃瓦上，回传照片给您。
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="label">建寺功德回向：</div>
+      <textarea id="wishInput" class="field textarea" placeholder=""></textarea>
+    </div>
+
+    <button id="payBtn" class="pay">
+      微信支付随喜
+    </button>
+
+    <div class="disclaimer">
+      <b>声明：阿弥陀佛！</b> 诸位善信吉祥，本寺院未授权任何个人或任何组织（单位）向信众化缘。
+    </div>
+
+    <div class="status" id="status"></div>
+    <div class="mini" id="miniUser"></div>
   </div>
 
   <script type="module" src="./pay.js"></script>
