@@ -201,7 +201,7 @@ function spawnMini({ username, amount }) {
   const mini = cloneAsMini(godTemplate);
 
   // Scale minis relative to main
-  const miniScale = mainScale * 0.16; // smaller, cleaner
+  const miniScale = mainScale * 0.32; // smaller, cleaner
   mini.scale.setScalar(miniScale);
 
   placeMiniInGrid(mini, nextMiniIndex++);
