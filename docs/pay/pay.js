@@ -1,7 +1,7 @@
 const SUPABASE_URL = "https://gsmkpxxjzrtpdvgocbex.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_bUv7a7CgIOiIMRHjMhIAFg_8W_IHlGw";
 
-console.log("PAY.JS VERSION: REDBOX_MODAL_ONLY + ADS + MILESTONE", Date.now());
+console.log("PAY.JS VERSION: CLEAN REDBOX ONLY (ADS + MILESTONE)", Date.now());
 
 const usernameEl = document.getElementById("username");
 const totalEl = document.getElementById("total");
@@ -17,9 +17,7 @@ const pills = Array.from(document.querySelectorAll(".pill"));
 
 const modal = document.getElementById("modal");
 const modalBody = document.getElementById("modalBody");
-const modalClose = document.getElementById("modalClose");
-const modalX = document.getElementById("modalX");
-const modalOk = document.getElementById("modalOk");
+const backdrop = document.querySelector(".modalBackdrop"); // if present
 
 const TARGET = 88888;
 
@@ -28,6 +26,11 @@ function setStatus(msg){ if (statusEl) statusEl.textContent = msg; }
 function clamp(n,a,b){ return Math.max(a, Math.min(b, n)); }
 function fmt(n){ return Number(n).toLocaleString("en-US"); }
 function randInt(min, max){ return Math.floor(min + Math.random() * (max - min + 1)); }
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+  }[c]));
+}
 
 // ---------- identity (NEW each reload) ----------
 const username = makeUsername();
@@ -49,7 +52,6 @@ function renderProgress(){
 
 // ---------- username generator ----------
 function choice(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
-
 function makeUsername(){
   const prefix = [
     "Nova","Lumen","Civic","Orbit","Pilot","Analog","Archive","Index","Signal","Vector","Kernel","Public","Future","Tender","Solid",
@@ -61,7 +63,6 @@ function makeUsername(){
     "Σ","Λ","Δ","Ψ","Ω",
     "К","Ж","Я","Мир"
   ];
-
   const core = [
     "狐","猫","风","月","光","林","云","星","桥","梦","纸","金","银",
     "さくら","ゆめ","ひかり",
@@ -69,11 +70,9 @@ function makeUsername(){
     "Atlas","Helios","Nyx",
     "Oro","Soleil","Morgen","Noche","Cielo"
   ];
-
   const join = ["_","-",".","~"];
   const num = ["01","07","13","21","33","55","88","144","233","404","777","999","2026"];
   const mark = ["","✨","🪙","🧿","🕯️"];
-
   return `${choice(prefix)}${choice(core)}${choice(join)}${choice(num)}${choice(mark)}`;
 }
 
@@ -87,7 +86,7 @@ pills.forEach((p) => {
   });
 });
 
-amountInput.addEventListener("input", () => {
+amountInput?.addEventListener("input", () => {
   amountInput.value = amountInput.value.replace(/[^\d]/g, "");
 });
 
@@ -98,58 +97,59 @@ maxBtn?.addEventListener("click", () => {
 });
 
 function getAmount(){
-  const raw = (amountInput.value || "").trim();
+  const raw = (amountInput?.value || "").trim();
   if (!raw) return 0;
   const n = Number(raw);
   if (!Number.isFinite(n)) return 0;
   return Math.max(0, Math.floor(n));
 }
 
-// ---------- modal: RED BOX ONLY ----------
-let modalLock = false; // prevents ads + milestone colliding
+// ---------- modal: ONLY red box ----------
+let modalLock = false;       // blocks popup stacking
+let currentModalKind = null; // "ad" | "milestone"
 
-function openRedBox({ lineTop, amountText, ctaText, showClose = true }){
-  // stop stacking / flicker
+function openRedBox({ lineTop, amountText, ctaText }){
+  // if something already open, do nothing (prevents overlays)
   if (modalLock) return;
+
   modalLock = true;
 
-  // make outer chrome irrelevant: we hide it via CSS too
   modalBody.innerHTML = `
     <div class="ad-wrap">
       <div class="ad-line ad-top">${escapeHtml(lineTop).replace(/\n/g,"<br/>")}</div>
       <div class="ad-line ad-amount">${escapeHtml(amountText)}</div>
       <button class="ad-cta" id="adCtaBtn">${escapeHtml(ctaText)}</button>
-      ${showClose ? `<button class="ad-close" id="adCloseBtn">X</button>` : ``}
     </div>
+    <button class="ad-close" id="adCloseBtn">X</button>
   `;
+
   modal.setAttribute("aria-hidden", "false");
 
-  document.getElementById("adCtaBtn")?.addEventListener("click", () => {
-    closeModal();
-    amountInput?.focus?.();
-  }, { once: true });
-
-  document.getElementById("adCloseBtn")?.addEventListener("click", () => {
-    closeModal();
-  }, { once: true });
+  document.getElementById("adCtaBtn")?.addEventListener("click", () => closeModal(), { once:true });
+  document.getElementById("adCloseBtn")?.addEventListener("click", () => closeModal(), { once:true });
 }
 
 function closeModal(){
   modal.setAttribute("aria-hidden", "true");
-  // small delay so next popup doesn't instantly replace + look “overlaid”
-  setTimeout(() => { modalLock = false; }, 150);
+  modalBody.innerHTML = "";
+
+  // if milestone was open, reset progress AFTER close
+  if (currentModalKind === "milestone") {
+    total = 0;
+    renderProgress();
+    setStatus("tier reset");
+  }
+
+  currentModalKind = null;
+
+  setTimeout(() => { modalLock = false; }, 160);
 }
 
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
-  }[c]));
-}
-
-// kill old chrome buttons if they exist in your HTML
-modalClose?.addEventListener("click", (e) => { e.preventDefault(); closeModal(); });
-modalX?.addEventListener("click", (e) => { e.preventDefault(); closeModal(); });
-modalOk?.addEventListener("click", (e) => { e.preventDefault(); closeModal(); });
+// click backdrop closes too
+backdrop?.addEventListener("click", closeModal);
+modal?.addEventListener("click", (e) => {
+  if (e.target === modal) closeModal();
+});
 
 // ---------- Supabase client ----------
 let supabase = null;
@@ -161,7 +161,7 @@ async function getSupabase(){
 }
 
 // ---------- pay action ----------
-payBtn.addEventListener("click", async () => {
+payBtn?.addEventListener("click", async () => {
   const amt = getAmount();
   if (!amt) { setStatus("enter an amount"); return; }
 
@@ -185,34 +185,24 @@ payBtn.addEventListener("click", async () => {
     renderProgress();
     setStatus("accepted");
 
-    // same-device shrine ping
+    // optional same-device shrine ping
     if ("BroadcastChannel" in window) {
       const ch = new BroadcastChannel("gongde");
       ch.postMessage({ type: "donation", username: safeUsername, amount: String(amt) });
       ch.close();
     }
 
-    // milestone popup (KEEP THIS)
+    // milestone: show red box ONLY
     if (total >= TARGET) {
-      // stop ads while milestone shows
-      modalLock = false; // allow milestone to open
+      // allow milestone even if ad timer is near
+      modalLock = false;
+      currentModalKind = "milestone";
+
       openRedBox({
         lineTop: "Advance to improve outcomes.\nMaintain alignment to keep momentum.",
         amountText: "$" + fmt(TARGET),
-        ctaText: "CONTINUE",
-        showClose: true
+        ctaText: "CONTINUE"
       });
-
-      // reset after closing
-      const prevClose = closeModal;
-      closeModal = function(){
-        modal.setAttribute("aria-hidden", "true");
-        total = 0;
-        renderProgress();
-        setStatus("tier reset");
-        setTimeout(() => { modalLock = false; }, 150);
-        closeModal = prevClose; // restore
-      };
     }
 
     amountInput.value = "";
@@ -225,7 +215,7 @@ payBtn.addEventListener("click", async () => {
   }
 });
 
-// ---------- ADS (20–40s random), uses same red box ----------
+// ---------- ADS (random 20–40s) ----------
 function scheduleAd(){
   const ms = randInt(20_000, 40_000);
   setTimeout(() => {
@@ -235,17 +225,17 @@ function scheduleAd(){
 }
 
 function showAd(){
-  // don’t interrupt milestone or an open modal
-  if (modal.getAttribute("aria-hidden") === "false") return;
+  // don’t interrupt if a modal is already open
   if (modalLock) return;
+  if (modal.getAttribute("aria-hidden") === "false") return;
+
+  currentModalKind = "ad";
 
   const offer = randInt(88, 988);
-
   openRedBox({
     lineTop: "Advance to improve outcomes.\nMaintain alignment to keep momentum.",
     amountText: "$" + offer,
-    ctaText: "MAKE OFFERING + PROGRESS FORTH",
-    showClose: true
+    ctaText: "MAKE OFFERING + PROGRESS FORTH"
   });
 }
 
@@ -254,7 +244,7 @@ scheduleAd();
 // back button
 document.getElementById("backBtn")?.addEventListener("click", () => history.back());
 
-// disable any “warn” popup handler
+// disable warn button completely
 document.getElementById("warnBtn")?.addEventListener("click", (e) => {
   e.preventDefault();
   e.stopPropagation();
