@@ -138,7 +138,7 @@ objLoader.load(
     const maxDim = Math.max(size.x, size.y, size.z);
 
     // ✅ MAKE IT WAY BIGGER
-    const target = 12.0; // was 1.4
+    const target = 18.0; // was 1.4
     const s = target / (maxDim || 1);
     obj.scale.setScalar(s);
 
