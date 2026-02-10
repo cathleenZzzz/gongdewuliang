@@ -1,66 +1,98 @@
 <!doctype html>
-<html lang="zh-CN">
+<html lang="en">
 <head>
   <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1" />
-  <title>功德支付</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1, viewport-fit=cover" />
+  <title>Fortune Terminal</title>
   <link rel="stylesheet" href="./pay.css" />
 </head>
 <body>
-  <!-- background content (faded, like screenshot) -->
-  <div class="bg">
-    <div class="bg-title">一片瓦，三世缘</div>
-    <div class="bg-text">
-      信众布施寺院的每一块砖瓦，我寺会在认捐的瓦片上篆写其功德芳名，
-      您的名字将被留在这座辉煌的圣殿上，接纳日月，沐浴风雨。
-    </div>
-  </div>
+  <div class="phone">
+    <header class="topbar">
+      <button class="icon" id="backBtn" aria-label="Back">‹</button>
+      <div class="title">Fortune Terminal</div>
+      <button class="icon" id="warnBtn" aria-label="Info">!</button>
+    </header>
 
-  <!-- modal sheet -->
-  <div class="sheet">
-    <button class="close" id="closeBtn" aria-label="close">×</button>
-
-    <div class="section">
-      <div class="label">护持金额：</div>
-      <div class="amt-grid" id="amtGrid">
-        <button class="amt selected" data-amt="108">108元</button>
-        <button class="amt" data-amt="188">188元</button>
-        <button class="amt" data-amt="388">388元</button>
-        <button class="amt" data-amt="688">688元</button>
-        <button class="amt" data-amt="888">888元</button>
-
-        <div class="amt custom">
-          <input id="customAmt" inputmode="decimal" placeholder="护持1000元，寺院刻碑留名。" />
+    <main class="sheet">
+      <section class="card">
+        <div class="row">
+          <div class="label">Identity</div>
+          <div class="value mono" id="username">—</div>
         </div>
-      </div>
-    </div>
 
-    <div class="section">
-      <div class="label">联系信息：</div>
-      <input id="nameInput" class="field" placeholder="功德芳名" />
-      <input id="phoneInput" class="field" inputmode="tel" placeholder="联系电话" />
-      <div class="hint">
-        请填写可以联系的手机号，寺院会在 3–7 天将您名字写在琉璃瓦上，回传照片给您。
-      </div>
-    </div>
+        <div class="row">
+          <div class="label">Balance</div>
+          <div class="value mono"><span id="total">0</span> units</div>
+        </div>
 
-    <div class="section">
-      <div class="label">建寺功德回向：</div>
-      <textarea id="wishInput" class="field textarea" placeholder=""></textarea>
-    </div>
+        <div class="progressWrap">
+          <div class="progressTop">
+            <div class="muted">Trajectory</div>
+            <div class="muted mono"><span id="pct">0</span>%</div>
+          </div>
+          <div class="bar">
+            <div class="fill" id="fill"></div>
+          </div>
+          <div class="progressBottom">
+            <div class="muted">Target: 88,888</div>
+            <div class="muted mono"><span id="remaining">88,888</span> left</div>
+          </div>
+        </div>
+      </section>
 
-    <button id="payBtn" class="pay">
-      微信支付随喜
-    </button>
+      <section class="card">
+        <div class="label">Contribution</div>
 
-    <div class="disclaimer">
-      <b>声明：阿弥陀佛！</b> 诸位善信吉祥，本寺院未授权任何个人或任何组织（单位）向信众化缘。
-    </div>
+        <div class="presetRow">
+          <button class="pill" data-amt="6">6</button>
+          <button class="pill" data-amt="18">18</button>
+          <button class="pill" data-amt="88">88</button>
+          <button class="pill" data-amt="188">188</button>
+          <button class="pill" data-amt="888">888</button>
+          <button class="pill" data-amt="1888">1888</button>
+        </div>
 
-    <div class="status" id="status"></div>
-    <div class="mini" id="miniUser"></div>
+        <div class="inputRow">
+          <input id="amountInput" inputmode="numeric" pattern="[0-9]*" placeholder="Enter units…" />
+          <button id="maxBtn" class="ghost">Max</button>
+        </div>
+
+        <button id="payBtn" class="payBtn">
+          Confirm &amp; Advance
+        </button>
+
+        <div class="fineprint">
+          By advancing, you agree to receive improved outcomes, optimized horizons, and elevated personal performance.
+        </div>
+      </section>
+
+      <section class="card soft">
+        <div class="tiny">
+          Status: <span id="status" class="mono">ready</span>
+        </div>
+        <div class="tiny">
+          (This is a simulated terminal. Numbers are symbolic.)
+        </div>
+      </section>
+    </main>
   </div>
 
-  <script type="module" src="./pay.js"></script>
+  <!-- modal -->
+  <div class="modal" id="modal" aria-hidden="true">
+    <div class="modalBackdrop" id="modalClose"></div>
+    <div class="modalCard">
+      <div class="modalHeader">
+        <div class="modalTitle">Outcome Update</div>
+        <button class="icon" id="modalX" aria-label="Close">×</button>
+      </div>
+      <div class="modalBody" id="modalBody">
+        —
+      </div>
+      <button class="modalBtn" id="modalOk">Understood</button>
+    </div>
+  </div>
+
+  <script type="module" src="./pay.js?v=pay3"></script>
 </body>
 </html>
