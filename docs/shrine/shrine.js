@@ -41,21 +41,6 @@ const MAIN = {
 const canvas = document.getElementById("scene");
 const testBtn = document.getElementById("test-donate");
 
-const fsBtn = document.getElementById("enterFullscreen");
-
-function requestFullscreen(){
-  const el = document.documentElement;
-
-  if (el.requestFullscreen) el.requestFullscreen();
-  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen(); // iOS Safari
-}
-
-fsBtn?.addEventListener("click", () => {
-  requestFullscreen();
-  fsBtn.remove(); // one-time only
-});
-
-
 // ====== AUDIO (default ON) ======
 function speak(text) {
   if (!("speechSynthesis" in window)) return;
@@ -67,7 +52,6 @@ function speak(text) {
   u.pitch = 1.25;
   u.volume = 1.0;
 
-  // Try to pick an English-ish voice if available (optional)
   const voices = window.speechSynthesis.getVoices?.() || [];
   const preferred =
     voices.find(v => /en/i.test(v.lang) && /female|samantha|zira|serena|karen/i.test(v.name)) ||
@@ -160,10 +144,7 @@ let godObj = null;
 let godTemplate = null;
 let mainScale = 1;
 
-// Queue donations until model is loaded
 const pendingDonations = [];
-
-// Mini pool
 const minis = []; // { group, createdAt, expiresAt }
 let nextMiniIndex = 0;
 
@@ -189,7 +170,7 @@ function placeMiniInGrid(miniGroup, index) {
 
   miniGroup.position.set(x, y, z);
 
-  // ✅ face forward
+  // face forward
   miniGroup.rotation.set(0, (Math.random() - 0.5) * 0.12, 0);
 }
 
@@ -218,7 +199,6 @@ function spawnMini({ username, amount }) {
 
   const mini = cloneAsMini(godTemplate);
 
-  // ✅ bigger minis
   const miniScale = mainScale * 0.44; // try 0.40–0.52
   mini.scale.setScalar(miniScale);
 
