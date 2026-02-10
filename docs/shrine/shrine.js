@@ -7,6 +7,8 @@ console.log("SHRINE JS — rotate main + solid mini wall", Date.now());
 // ====== CONFIG ======
 const BASE = "/gongdewuliang";
 const MODEL_DIR = `${BASE}/assets/models/gen_god/`;
+const SUPABASE_URL = "https://YOURPROJECT.supabase.co";
+const SUPABASE_ANON_KEY = "YOUR_PUBLISHABLE_OR_ANON_KEY";
 
 const PATHS = {
   obj: `${MODEL_DIR}base.obj`,
@@ -264,6 +266,48 @@ objLoader.load(
 window.gongdeDonate = function gongdeDonate({ username, amount }) {
   spawnMini({ username: String(username), amount: String(amount) });
 };
+// ===== Supabase Realtime: receive phone donations =====
+async function startRealtime() {
+  const SUPABASE_URL = "https://YOURPROJECT.supabase.co";
+  const SUPABASE_ANON_KEY = "YOUR_PUBLISHABLE_OR_ANON_KEY";
+
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    console.warn("[realtime] missing Supabase keys");
+    return;
+  }
+
+  const { createClient } = await import(
+    "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"
+  );
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  supabase
+    .channel("gongde-donations")
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "donations" },
+      (payload) => {
+        const row = payload.new;
+        const name = row.name || row.username || "善信";
+        const amount = row.amount || 0;
+
+        console.log("[realtime] donation from phone:", row);
+
+        // 🔴 THIS is the important line
+        window.gongdeDonate({
+          username: String(name),
+          amount: String(amount)
+        });
+      }
+    )
+    .subscribe((status) => {
+      console.log("[realtime] status:", status);
+    });
+}
+
+// start listening
+startRealtime();
 
 const chan = ("BroadcastChannel" in window) ? new BroadcastChannel("gongde") : null;
 if (chan) {
