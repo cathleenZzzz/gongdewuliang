@@ -44,9 +44,22 @@ const testBtn = document.getElementById("test-donate");
 // ====== AUDIO (default ON) ======
 function speak(text) {
   if (!("speechSynthesis" in window)) return;
+
   const u = new SpeechSynthesisUtterance(text);
-  u.rate = 1.02;
-  u.pitch = 0.72;
+
+  // brighter voice settings
+  u.rate = 1.08;
+  u.pitch = 1.25;
+  u.volume = 1.0;
+
+  // Try to pick an English-ish voice if available (optional)
+  const voices = window.speechSynthesis.getVoices?.() || [];
+  const preferred =
+    voices.find(v => /en/i.test(v.lang) && /female|samantha|zira|serena|karen/i.test(v.name)) ||
+    voices.find(v => /en/i.test(v.lang)) ||
+    voices[0];
+  if (preferred) u.voice = preferred;
+
   window.speechSynthesis.cancel();
   window.speechSynthesis.speak(u);
 }
@@ -201,7 +214,7 @@ function spawnMini({ username, amount }) {
   const expiresAt = createdAt + BLESS_MS;
   minis.push({ group: mini, createdAt, expiresAt });
 
-  speak(`感谢善信 ${username}，供奉 ${amount} 元。功德无量。`);
+  speak(`${username} made a offering of ${amount}. Blessed is your path and fortune.`);
 }
 
 // ====== LOAD MAIN OBJ ======
