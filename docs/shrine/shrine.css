@@ -1,8 +1,8 @@
 html, body {
   height: 100%;
   margin: 0;
-  background: #0b0b0d;
-  color: #e8e3d8;
+  background: #ffffff;
+  color: #111111;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
 }
 
@@ -10,6 +10,7 @@ html, body {
   position: relative;
   height: 100%;
   overflow: hidden;
+  background: #ffffff;
 }
 
 /* 3D canvas full screen */
@@ -19,113 +20,35 @@ html, body {
   display: block;
 }
 
-/* Collage overlay */
-#collage {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  mix-blend-mode: screen;
-  opacity: 0.9;
-}
-
-.scrap {
-  position: absolute;
-  width: 220px;
-  filter: contrast(1.1) saturate(1.2);
-  opacity: 0.75;
-}
-.scrap:nth-child(1) { left: 4%; top: 8%; transform: rotate(-8deg); }
-.scrap:nth-child(2) { right: 6%; bottom: 12%; transform: rotate(6deg); }
-
-.stamp {
-  position: absolute;
-  left: 50%;
-  top: 10%;
-  transform: translateX(-50%) rotate(-2deg);
-  padding: 10px 14px;
-  border: 1px solid rgba(232,227,216,0.35);
-  background: rgba(15, 10, 10, 0.45);
-  backdrop-filter: blur(3px);
-  letter-spacing: 2px;
-  text-shadow: 0 0 18px rgba(255,200,180,0.25);
-}
-
-/* Thousand-buddha wall UI */
-#wall {
-  position: absolute;
-  left: 16px;
-  bottom: 16px;
-  width: min(520px, calc(100% - 32px));
-  background: rgba(10,10,12,0.55);
-  border: 1px solid rgba(232,227,216,0.18);
-  border-radius: 14px;
-  padding: 12px;
-  backdrop-filter: blur(6px);
-}
-
-#wall-title {
-  font-size: 12px;
-  opacity: 0.8;
-  margin-bottom: 10px;
-}
-
-#tiles {
-  display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 8px;
-}
-
-.tile {
-  aspect-ratio: 1 / 1;
-  border-radius: 10px;
-  border: 1px solid rgba(232,227,216,0.15);
-  background: radial-gradient(circle at 30% 30%, rgba(255,240,220,0.22), rgba(30,20,20,0.25));
-  position: relative;
-  overflow: hidden;
-  animation: pop 220ms ease-out;
-}
-
-@keyframes pop {
-  from { transform: scale(0.92); opacity: 0; }
-  to   { transform: scale(1); opacity: 1; }
-}
-
-.tile .name {
-  position: absolute;
-  left: 6px;
-  right: 6px;
-  bottom: 6px;
-  font-size: 10px;
-  opacity: 0.9;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  text-shadow: 0 0 10px rgba(0,0,0,0.7);
-}
-
-.tile .glow {
-  position: absolute;
-  inset: -30%;
-  background: conic-gradient(from 90deg, rgba(255,200,160,0.0), rgba(255,200,160,0.22), rgba(255,200,160,0.0));
-  animation: spin 2.4s linear infinite;
-  opacity: 0.6;
-}
-
-@keyframes spin { to { transform: rotate(360deg); } }
-
-/* Buttons */
-#enable-audio, #test-donate {
+/* Keep only the test button (clean, gallery-like) */
+#test-donate {
   position: absolute;
   right: 16px;
-  padding: 10px 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(232,227,216,0.2);
-  background: rgba(10,10,12,0.55);
-  color: #e8e3d8;
+  bottom: 16px;
+
+  padding: 10px 14px;
+  border-radius: 12px;
+
+  border: 1px solid rgba(0,0,0,0.12);
+  background: rgba(255,255,255,0.85);
+  color: #111;
+
   cursor: pointer;
-  backdrop-filter: blur(6px);
+  backdrop-filter: blur(8px);
+
+  font: 14px/1.1 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.10);
+  transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
+  opacity: 0.92;
 }
 
-#enable-audio { top: 16px; }
-#test-donate { top: 64px; opacity: 0.8; }
-#test-donate:hover { opacity: 1; }
+#test-donate:hover {
+  opacity: 1;
+  transform: translateY(-1px);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.14);
+}
+
+#test-donate:active {
+  transform: translateY(0px);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.10);
+}
