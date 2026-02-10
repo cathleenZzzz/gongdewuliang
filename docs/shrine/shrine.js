@@ -2,8 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
 
-console.log("shrine.js loaded OK");
-console.log("VERSION: centered-nudge", Date.now());
+console.log("SHRINE JS — white + glowing wall", Date.now());
 
 // ====== CONFIG ======
 const BASE = "/gongdewuliang";
@@ -17,80 +16,105 @@ const PATHS = {
   metallic: `${MODEL_DIR}texture_metallic.png`,
 };
 
-// Put the statue "feet" on top of the pedestal.
-// Your pedestal top is ~0.45 (cylinder height 0.45, centered at y=0.22)
-const PEDESTAL_TOP_Y = 0.45;
+// Main idol size
+const MAIN_TARGET = 18.0;
 
-// Manual nudges (edit these after you see it)
-const NUDGE_X = 0.0;   // + moves right, - moves left
-const NUDGE_Z = 0.0;   // + moves toward camera, - moves away
+// Wall layout (grid behind main idol)
+const WALL = {
+  cols: 30,
+  rows: 14,
+  spacingX: 1.15,
+  spacingY: 1.05,
+  z: -14,          // behind main statue
+  yBase: 1.1,      // start height
+  jitter: 0.06,    // tiny random variance so it feels alive
+};
 
 // ====== DOM ======
 const canvas = document.getElementById("scene");
-const tilesEl = document.getElementById("tiles");
 
 // ====== THREE SETUP ======
-const renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: false });
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.1;
+renderer.toneMappingExposure = 1.0;
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0x07070a);
+// ✅ white background
+scene.background = new THREE.Color(0xffffff);
 
-const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 2000);
-camera.position.set(0, 6.0, 32.0);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 5000);
+// pulled back to fit main + wall
+camera.position.set(0, 10.5, 46);
 
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
-controls.target.set(0, 6.0, 0);
+controls.enablePan = false;
+controls.target.set(0, 7.0, 0);
 controls.update();
 
-// ---- Lights (stable) ----
-scene.add(new THREE.AmbientLight(0xffffff, 0.25));
-const key = new THREE.DirectionalLight(0xffffff, 1.1);
-key.position.set(3, 5, 2);
-scene.add(key);
-const fill = new THREE.DirectionalLight(0xb7c9ff, 0.35);
-fill.position.set(-3, 2, -2);
-scene.add(fill);
-const candle = new THREE.PointLight(0xffb07a, 0.25, 14);
-candle.position.set(0.0, 1.2, 1.2);
-scene.add(candle);
+// ====== LIGHTS (slightly warmer) ======
+scene.add(new THREE.AmbientLight(0xffffff, 0.6));
 
-// ---- Pedestal ----
-const pedestal = new THREE.Mesh(
-  new THREE.CylinderGeometry(0.65, 0.85, 0.45, 48),
-  new THREE.MeshStandardMaterial({ color: 0x1a1412, metalness: 0.15, roughness: 0.9 })
-);
-pedestal.position.set(0, 0.22, 0);
-scene.add(pedestal);
+const warmKey = new THREE.DirectionalLight(0xfff1dd, 1.15); // warm-ish
+warmKey.position.set(5, 9, 7);
+scene.add(warmKey);
 
-// ---- Ground ----
-const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(80, 80),
-  new THREE.MeshStandardMaterial({ color: 0x07060a, roughness: 1 })
-);
-ground.rotation.x = -Math.PI / 2;
-ground.position.y = 0;
-scene.add(ground);
+const coolFill = new THREE.DirectionalLight(0xeaf0ff, 0.35);
+coolFill.position.set(-6, 5, -6);
+scene.add(coolFill);
 
-// ====== Resize ======
-function resize() {
-  const w = canvas.clientWidth;
-  const h = canvas.clientHeight;
-  renderer.setSize(w, h, false);
-  camera.aspect = w / h;
-  camera.updateProjectionMatrix();
+// ====== GLOWING 千佛墙 (behind main figure) ======
+const smallGeo = new THREE.IcosahedronGeometry(0.18, 1);
+// Bright emissive so it glows even on white background
+const smallMat = new THREE.MeshStandardMaterial({
+  color: 0xffffff,
+  emissive: new THREE.Color(0xffffff),
+  emissiveIntensity: 1.6,
+  metalness: 0.0,
+  roughness: 0.35,
+});
+
+const count = WALL.cols * WALL.rows;
+const wall = new THREE.InstancedMesh(smallGeo, smallMat, count);
+wall.instanceMatrix.setUsage(THREE.StaticDrawUsage);
+
+const dummy = new THREE.Object3D();
+let i = 0;
+
+const totalW = (WALL.cols - 1) * WALL.spacingX;
+const totalH = (WALL.rows - 1) * WALL.spacingY;
+
+for (let r = 0; r < WALL.rows; r++) {
+  for (let c = 0; c < WALL.cols; c++) {
+    const x = (c * WALL.spacingX) - totalW / 2;
+    const y = WALL.yBase + (r * WALL.spacingY);
+    const z = WALL.z;
+
+    // tiny jitter to avoid perfect grid feel
+    const jx = (Math.random() - 0.5) * WALL.jitter;
+    const jy = (Math.random() - 0.5) * WALL.jitter;
+    const jz = (Math.random() - 0.5) * WALL.jitter;
+
+    dummy.position.set(x + jx, y + jy, z + jz);
+
+    // no rotation (static), but give slight random facing variance
+    dummy.rotation.set(0, (Math.random() - 0.5) * 0.25, 0);
+
+    // slight size variation
+    const s = 0.8 + Math.random() * 0.5;
+    dummy.scale.setScalar(s);
+
+    dummy.updateMatrix();
+    wall.setMatrixAt(i++, dummy.matrix);
+  }
 }
-window.addEventListener("resize", resize);
-resize();
+scene.add(wall);
 
-// ====== LOAD TEXTURES + OBJ ======
+// ====== LOAD TEXTURES + MAIN OBJ ======
 const manager = new THREE.LoadingManager();
 manager.onError = (url) => console.error("[load] failed:", url);
-
 const texLoader = new THREE.TextureLoader(manager);
 
 function loadTex(url, { srgb = false } = {}) {
@@ -109,13 +133,13 @@ const normalMap = loadTex(PATHS.normal);
 const roughnessMap = loadTex(PATHS.roughness);
 const metalnessMap = loadTex(PATHS.metallic);
 
-const godMaterial = new THREE.MeshStandardMaterial({
+const mainMat = new THREE.MeshStandardMaterial({
   map: diffuseMap,
   normalMap,
   roughnessMap,
   metalnessMap,
-  roughness: 1.0,
-  metalness: 0.0,
+  roughness: 0.9,
+  metalness: 0.05,
 });
 
 const objLoader = new OBJLoader(manager);
@@ -126,101 +150,73 @@ objLoader.load(
   (obj) => {
     obj.traverse((child) => {
       if (child && child.isMesh) {
-        child.material = godMaterial;
+        child.material = mainMat;
         if (child.geometry) child.geometry.computeVertexNormals();
       }
     });
 
-    // Bounds before scaling
+    // bounds before scaling
     const box = new THREE.Box3().setFromObject(obj);
     const size = new THREE.Vector3();
     box.getSize(size);
     const center = new THREE.Vector3();
     box.getCenter(center);
 
-    console.log("[obj] bbox size:", size.x, size.y, size.z, "center:", center.x, center.y, center.z);
-
-    // Center X/Z around origin (remove bbox center)
+    // center X/Z
     obj.position.x -= center.x;
     obj.position.z -= center.z;
 
-    // Scale huge
+    // scale big
     const maxDim = Math.max(size.x, size.y, size.z) || 1;
-    const target = 18.0;
-    const s = target / maxDim;
+    const s = MAIN_TARGET / maxDim;
     obj.scale.setScalar(s);
 
-    console.log("[obj] SCALE APPLIED:", s, "target:", target, "maxDim:", maxDim);
-
-    // Recompute bounds AFTER scaling & X/Z center so we can plant feet
+    // re-bounds after scaling
     const box2 = new THREE.Box3().setFromObject(obj);
     const minY = box2.min.y;
 
-    // Plant the base on the pedestal top
-    obj.position.y += (PEDESTAL_TOP_Y - minY);
+    // set base on a “floor” around y=0 (white stage)
+    obj.position.y += (0.0 - minY);
 
-    // Manual nudges (for “visual center”)
-    obj.position.x += NUDGE_X;
-    obj.position.z += NUDGE_Z;
-
+    // face forward
     obj.rotation.y = Math.PI;
 
     scene.add(obj);
     godObj = obj;
 
-    // Force consistent view
+    // set view nicely (no need to move wall)
     controls.reset();
-    controls.target.set(0 + NUDGE_X, 6.0, 0 + NUDGE_Z);
-    camera.position.set(0, 10.0, 40.0);
+    controls.target.set(0, 8.0, 0);
+    camera.position.set(0, 11.0, 46.0);
     camera.lookAt(controls.target);
     controls.update();
 
-    console.log("[obj] loaded + centered-ish:", PATHS.obj);
+    console.log("[obj] loaded main idol:", PATHS.obj);
   },
   undefined,
   (err) => console.error("[obj] FAILED:", err)
 );
 
-// ====== DONATION WALL ======
-function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (c) => ({
-    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
-  }[c]));
-}
-
-function spawnBlessingTile({ username, amount }) {
-  const tile = document.createElement("div");
-  tile.className = "tile";
-  tile.innerHTML = `<div class="glow"></div><div class="name">${escapeHtml(username)} · ¥${amount}</div>`;
-  tilesEl.prepend(tile);
-
-  setTimeout(() => {
-    tile.style.transition = "opacity 600ms ease, transform 600ms ease";
-    tile.style.opacity = "0";
-    tile.style.transform = "scale(0.9)";
-    setTimeout(() => tile.remove(), 650);
-  }, 60000);
-}
-
-// ====== SPEECH ======
-let speechEnabled = false;
-document.getElementById("enable-audio").addEventListener("click", () => {
-  speechEnabled = true;
-  speak("功德系统已启动。欢迎供奉。");
-});
+// ====== AUDIO (default ON) ======
+let speechEnabled = true;
 
 function speak(text) {
   if (!speechEnabled || !("speechSynthesis" in window)) return;
   const u = new SpeechSynthesisUtterance(text);
   u.rate = 1.02;
-  u.pitch = 0.7;
+  u.pitch = 0.72;
   window.speechSynthesis.cancel();
   window.speechSynthesis.speak(u);
 }
 
+// ====== DONATION “TEST” (kept, no UI text wall) ======
 function onDonationEvent({ username, amount }) {
-  spawnBlessingTile({ username, amount });
-  speak(`感谢善信 ${username}，供奉 ${amount} 元。功德无量，福报增长。`);
+  // brief “flash blessing” effect on the wall
+  const prev = smallMat.emissiveIntensity;
+  smallMat.emissiveIntensity = 2.8;
+  setTimeout(() => (smallMat.emissiveIntensity = prev), 240);
+
+  speak(`感谢善信 ${username}，供奉 ${amount} 元。功德无量。`);
 }
 
 document.getElementById("test-donate").addEventListener("click", () => {
@@ -229,10 +225,23 @@ document.getElementById("test-donate").addEventListener("click", () => {
   onDonationEvent({ username, amount });
 });
 
+// ====== Resize ======
+function resize() {
+  const w = canvas.clientWidth;
+  const h = canvas.clientHeight;
+  renderer.setSize(w, h, false);
+  camera.aspect = w / h;
+  camera.updateProjectionMatrix();
+}
+window.addEventListener("resize", resize);
+resize();
+
 // ====== RENDER LOOP ======
 renderer.setAnimationLoop(() => {
   controls.update();
-  if (godObj) godObj.rotation.y += 0.0012;
-  candle.intensity = 0.22 + Math.random() * 0.08;
+
+  // Main idol can stay still; wall should not rotate
+  // If you later want slow ceremonial rotation, we can add it back.
+
   renderer.render(scene, camera);
 });
