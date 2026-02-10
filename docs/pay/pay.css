@@ -292,3 +292,6 @@ button, input{
   .presetRow{ gap: 8px; }
   .pill{ padding: 10px 10px; }
 }
+button, input, .pill, #modal, .modal, .card, .panel {
+  border-radius: 0 !important;
+}
