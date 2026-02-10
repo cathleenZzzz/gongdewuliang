@@ -1,6 +1,8 @@
 const SUPABASE_URL = "https://gsmkpxxjzrtpdvgocbex.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_bUv7a7CgIOiIMRHjMhIAFg_8W_IHlGw";
 
+console.log("PAY.JS VERSION: ADS_FIXED_1", Date.now());
+
 const usernameEl = document.getElementById("username");
 const totalEl = document.getElementById("total");
 const pctEl = document.getElementById("pct");
@@ -30,9 +32,11 @@ let total = 0;
 renderProgress();
 setStatus("ready");
 
+// ===== helpers =====
 function setStatus(msg){ statusEl.textContent = msg; }
 function clamp(n,a,b){ return Math.max(a, Math.min(b, n)); }
 function fmt(n){ return Number(n).toLocaleString("en-US"); }
+function randInt(min, max){ return Math.floor(min + Math.random() * (max - min + 1)); }
 
 function renderProgress(){
   totalEl.textContent = fmt(total);
@@ -59,15 +63,10 @@ function makeUsername(){
   ];
 
   const core = [
-    // Chinese allowed
     "狐","猫","风","月","光","林","云","星","桥","梦","纸","金","银",
-    // Japanese
     "さくら","ゆめ","ひかり",
-    // Korean
     "빛","달","별",
-    // Greek-ish tokens
     "Atlas","Helios","Nyx",
-    // misc
     "Oro","Soleil","Morgen","Noche","Cielo"
   ];
 
@@ -106,14 +105,23 @@ function getAmount(){
   return Math.max(0, Math.floor(n));
 }
 
-// ===== modal =====
-function openModal(text){
+// ===== modal (two modes: "milestone" resets, "ad" doesn't) =====
+let modalMode = "milestone"; // "milestone" | "ad"
+
+function openModalText(text, mode = "milestone"){
+  modalMode = mode;
   modalBody.textContent = text;
+  modal.setAttribute("aria-hidden", "false");
+}
+function openModalHtml(html, mode = "ad"){
+  modalMode = mode;
+  modalBody.innerHTML = html;
   modal.setAttribute("aria-hidden", "false");
 }
 function closeModal(){
   modal.setAttribute("aria-hidden", "true");
 }
+
 function resetProgress(){
   total = 0;
   renderProgress();
@@ -121,68 +129,15 @@ function resetProgress(){
   pills.forEach(x => x.classList.remove("active"));
   setStatus("ready");
 }
-modalClose.addEventListener("click", () => { closeModal(); resetProgress(); });
-modalX.addEventListener("click", () => { closeModal(); resetProgress(); });
-modalOk.addEventListener("click", () => { closeModal(); resetProgress(); });
 
-// ===== random popup "ads" (every 20–40s) =====
-let adTimer = null;
-
-function rand(min, max){ return Math.floor(min + Math.random() * (max - min + 1)); }
-
-function scheduleAd(){
-  const ms = rand(20_000, 40_000);
-  adTimer = setTimeout(() => {
-    showAd();
-    scheduleAd();
-  }, ms);
+function handleModalClose(){
+  closeModal();
+  if (modalMode === "milestone") resetProgress();
 }
 
-function showAd(){
-  // build an ugly popup like the reference image (no title line)
-  const offer = Math.max(1, Math.floor(Math.random() * 900) + 88); // $88–$988-ish
-
-  // IMPORTANT: use innerHTML so we can style it
-  modalBody.innerHTML = `
-    <div class="ad-wrap">
-      <div class="ad-line" style="text-align:center;">
-        LIMITED ACCESS CREDIT
-      </div>
-
-      <div class="ad-line ad-amount">
-        $${offer}
-      </div>
-
-      <div class="ad-line" style="text-align:center;">
-        Advance to improve outcomes.<br/>
-        Maintain alignment to keep momentum.
-      </div>
-
-      <button class="ad-cta" id="adCtaBtn">
-        MAKE OFFERING + PROGRESS FORTH
-      </button>
-    </div>
-  `;
-
-  modal.setAttribute("aria-hidden", "false");
-
-  // Clicking CTA just closes the ad (or you can focus the amount input)
-  document.getElementById("adCtaBtn")?.addEventListener("click", () => {
-    modal.setAttribute("aria-hidden", "true");
-    amountInput?.focus?.();
-  }, { once: true });
-
-  // Make closing NOT reset progress (your original close handlers reset)
-  const keep = () => { modal.setAttribute("aria-hidden", "true"); };
-
-  modalClose.onclick = keep;
-  modalX.onclick = keep;
-  modalOk.onclick = keep;
-}
-
-
-// start the ad loop
-scheduleAd();
+modalClose.addEventListener("click", handleModalClose);
+modalX.addEventListener("click", handleModalClose);
+modalOk.addEventListener("click", handleModalClose);
 
 // ===== Supabase client =====
 let supabase = null;
@@ -204,21 +159,18 @@ payBtn.addEventListener("click", async () => {
   try{
     const sb = await getSupabase();
 
-    // ✅ FIX: your column is `username`, not `name`
     const safeUsername =
       (typeof username === "string" && username.trim()) ? username.trim() : makeUsername();
 
-    console.log("PAY VERSION flat1b", Date.now(), { safeUsername, amt });
+    console.log("[PAY] inserting:", { safeUsername, amt });
 
     const { error } = await sb.from("donations").insert({
       username: safeUsername,
-      name: safeUsername,     // keep both filled
       amount: amt,
-      phone: "",              // optional fields: keep harmless
+      name: safeUsername,
+      phone: "",
       wish: ""
     });
-
-
     if (error) throw error;
 
     total += amt;
@@ -228,16 +180,17 @@ payBtn.addEventListener("click", async () => {
     // optional same-device shrine ping
     if ("BroadcastChannel" in window) {
       const ch = new BroadcastChannel("gongde");
-      ch.postMessage({ type: "donation", username, amount: String(amt) });
+      ch.postMessage({ type: "donation", username: safeUsername, amount: String(amt) });
       ch.close();
     }
 
-    // milestone
+    // milestone popup (this one resets progress when closed)
     if (total >= TARGET) {
-      openModal(
+      openModalText(
         "You have reached a new tier of stability. " +
         "Expect improved timing, better decisions, and a smoother path forward. " +
-        "Maintain alignment to preserve momentum."
+        "Maintain alignment to preserve momentum.",
+        "milestone"
       );
     }
 
@@ -251,8 +204,51 @@ payBtn.addEventListener("click", async () => {
   }
 });
 
+// ===== UGLY AD POPUPS (every 20–40s, random) =====
+let adTimer = null;
+
+function scheduleAd(){
+  const ms = randInt(20_000, 40_000);
+  adTimer = setTimeout(() => {
+    showAd();
+    scheduleAd();
+  }, ms);
+}
+
+function showAd(){
+  // do not stack on top of milestone/other popup
+  if (modal.getAttribute("aria-hidden") === "false") return;
+
+  const offer = randInt(88, 988);
+
+  openModalHtml(`
+    <div class="ad-wrap">
+      <div class="ad-line" style="text-align:center;">
+        Advance to improve outcomes.<br/>
+        Maintain alignment to keep momentum.
+      </div>
+
+      <div class="ad-line ad-amount">
+        $${offer}
+      </div>
+
+      <button class="ad-cta" id="adCtaBtn">
+        MAKE OFFERING + PROGRESS FORTH
+      </button>
+    </div>
+  `, "ad");
+
+  document.getElementById("adCtaBtn")?.addEventListener("click", () => {
+    closeModal();
+    amountInput?.focus?.();
+  }, { once: true });
+}
+
+scheduleAd();
+
 // top buttons
 document.getElementById("backBtn")?.addEventListener("click", () => history.back());
 document.getElementById("warnBtn")?.addEventListener("click", () => {
-  openModal("This terminal records commitments and reflects progress in real time.");
+  // keep as non-resetting info popup
+  openModalText("This terminal records commitments and reflects progress in real time.", "ad");
 });
