@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1, viewport-fit=cover" />
   <title>Fortune Terminal</title>
-  <link rel="stylesheet" href="./pay.css" />
+  <link rel="stylesheet" href="./pay.css?v=flat1" />
 </head>
 <body>
   <div class="phone">
@@ -14,6 +14,11 @@
       <button class="icon" id="warnBtn" aria-label="Info">!</button>
     </header>
 
+    <!-- more obvious, at the top -->
+    <div class="notice">
+      Participation improves your outlook. Continued use may increase momentum, clarity, and favorable outcomes.
+    </div>
+
     <main class="sheet">
       <section class="card">
         <div class="row">
@@ -22,57 +27,51 @@
         </div>
 
         <div class="row">
-          <div class="label">Balance</div>
-          <div class="value mono"><span id="total">0</span> units</div>
+          <div class="label">Session Total</div>
+          <div class="value mono">$<span id="total">0</span></div>
         </div>
 
         <div class="progressWrap">
           <div class="progressTop">
-            <div class="muted">Trajectory</div>
+            <div class="muted">Progress</div>
             <div class="muted mono"><span id="pct">0</span>%</div>
           </div>
+
           <div class="bar">
             <div class="fill" id="fill"></div>
           </div>
+
           <div class="progressBottom">
-            <div class="muted">Target: 88,888</div>
-            <div class="muted mono"><span id="remaining">88,888</span> left</div>
+            <div class="muted">Goal: $88,888</div>
+            <div class="muted mono">$<span id="remaining">88,888</span> left</div>
           </div>
         </div>
       </section>
 
       <section class="card">
-        <div class="label">Contribution</div>
+        <div class="label">Amount</div>
 
         <div class="presetRow">
-          <button class="pill" data-amt="6">6</button>
-          <button class="pill" data-amt="18">18</button>
-          <button class="pill" data-amt="88">88</button>
-          <button class="pill" data-amt="188">188</button>
-          <button class="pill" data-amt="888">888</button>
-          <button class="pill" data-amt="1888">1888</button>
+          <button class="pill" data-amt="6">$6</button>
+          <button class="pill" data-amt="18">$18</button>
+          <button class="pill" data-amt="88">$88</button>
+          <button class="pill" data-amt="188">$188</button>
+          <button class="pill" data-amt="888">$888</button>
+          <button class="pill" data-amt="1888">$1888</button>
         </div>
 
         <div class="inputRow">
-          <input id="amountInput" inputmode="numeric" pattern="[0-9]*" placeholder="Enter units…" />
+          <input id="amountInput" inputmode="numeric" pattern="[0-9]*" placeholder="Enter amount…" />
           <button id="maxBtn" class="ghost">Max</button>
         </div>
 
         <button id="payBtn" class="payBtn">
-          Confirm &amp; Advance
+          Make an Offering
         </button>
 
-        <div class="fineprint">
-          By advancing, you agree to receive improved outcomes, optimized horizons, and elevated personal performance.
-        </div>
-      </section>
-
-      <section class="card soft">
-        <div class="tiny">
-          Status: <span id="status" class="mono">ready</span>
-        </div>
-        <div class="tiny">
-          (This is a simulated terminal. Numbers are symbolic.)
+        <div class="statusRow">
+          <span class="muted">Status</span>
+          <span id="status" class="mono">ready</span>
         </div>
       </section>
     </main>
@@ -86,13 +85,11 @@
         <div class="modalTitle">Outcome Update</div>
         <button class="icon" id="modalX" aria-label="Close">×</button>
       </div>
-      <div class="modalBody" id="modalBody">
-        —
-      </div>
-      <button class="modalBtn" id="modalOk">Understood</button>
+      <div class="modalBody" id="modalBody">—</div>
+      <button class="modalBtn" id="modalOk">Continue</button>
     </div>
   </div>
 
-  <script type="module" src="./pay.js?v=pay3"></script>
+  <script type="module" src="./pay.js?v=flat1"></script>
 </body>
 </html>
