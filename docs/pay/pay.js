@@ -1,142 +1,131 @@
 // docs/pay/pay.js
+
 const $ = (id) => document.getElementById(id);
 
-const userEl = $("user");
-const balEl = $("balance");
-const amtEl = $("amount");
+const amtGrid = $("amtGrid");
+const customAmt = $("customAmt");
+const nameInput = $("nameInput");
+const phoneInput = $("phoneInput");
+const wishInput = $("wishInput");
+const payBtn = $("payBtn");
 const statusEl = $("status");
-const donateBtn = $("donate");
+const miniUser = $("miniUser");
+const closeBtn = $("closeBtn");
 
-const adModal = $("adModal");
-const closeAd = $("closeAd");
+const LS_USER = "gongde_user_v2";
 
-const LS_USER = "gongde_user_v1";
-const LS_DONATED = "gongde_donated_v1";
+// ===== Supabase (we'll fill later in Step 5) =====
+const SUPABASE_URL = "";      // e.g. "https://xxxx.supabase.co"
+const SUPABASE_ANON_KEY = ""; // public anon key
 
-// ===== Username =====
 function makeUser() {
   const a = Math.random().toString(16).slice(2, 6).toUpperCase();
   const b = Math.random().toString(16).slice(2, 6).toUpperCase();
   return `善信_${a}${b}`;
 }
+
 const username = localStorage.getItem(LS_USER) || makeUser();
 localStorage.setItem(LS_USER, username);
-userEl.textContent = username;
+miniUser.textContent = `匿名用户: ${username}`;
 
-// ===== Balance (fake) =====
-let balance = 10000.0;
-balEl.textContent = `¥ ${balance.toFixed(2)}`;
-
-// ===== Ads =====
-let adsEnabled = localStorage.getItem(LS_DONATED) !== "yes";
-let adTimer = null;
-
-function showAd() {
-  if (!adsEnabled) return;
-  adModal.classList.remove("hidden");
+function setSelectedButton(btn) {
+  document.querySelectorAll(".amt").forEach((b) => b.classList.remove("selected"));
+  if (btn) btn.classList.add("selected");
 }
 
-function hideAd() {
-  adModal.classList.add("hidden");
+function parseAmount() {
+  const selected = document.querySelector(".amt.selected");
+  const picked = selected?.dataset?.amt ? Number(selected.dataset.amt) : null;
+
+  const custom = Number(String(customAmt.value || "").replace(/[^\d.]/g, ""));
+  const useCustom = Number.isFinite(custom) && custom > 0;
+
+  const amt = useCustom ? custom : picked;
+  if (!Number.isFinite(amt) || amt <= 0) return null;
+
+  // clamp to 2 decimals
+  return Math.round(amt * 100) / 100;
 }
 
-function scheduleNextAd() {
-  if (!adsEnabled) return;
-  const ms = (10 + Math.random() * 10) * 1000; // 10–20s
-  clearTimeout(adTimer);
-  adTimer = setTimeout(() => {
-    showAd();
-    scheduleNextAd();
-  }, ms);
-}
+// button select behavior
+amtGrid.addEventListener("click", (e) => {
+  const btn = e.target.closest(".amt");
+  if (!btn) return;
+  setSelectedButton(btn);
+  // if user clicks a preset, clear custom
+  if (btn.dataset.amt) customAmt.value = "";
+});
 
-closeAd.addEventListener("click", hideAd);
-scheduleNextAd();
+// typing custom amount unselects presets
+customAmt.addEventListener("input", () => {
+  if (String(customAmt.value || "").trim().length > 0) {
+    setSelectedButton(null);
+  }
+});
 
-// ===== Supabase optional hookup =====
-// You will paste your keys later. Until then, it stays in DEMO MODE.
-const SUPABASE_URL = ""; // e.g. "https://xxxx.supabase.co"
-const SUPABASE_ANON_KEY = ""; // "eyJhbGciOi..."
+closeBtn?.addEventListener("click", () => {
+  // just a fake close for now
+  statusEl.textContent = "（已关闭弹窗：演示）";
+});
 
-async function postDonationToBackend({ username, amount }) {
+// ===== Post donation (demo now, supabase later) =====
+async function postDonation({ username, amount, name, phone, wish }) {
+  // Demo mode: no backend
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     return { ok: true, mode: "demo" };
   }
 
-  // Import via CDN (works on GitHub Pages)
-  // jsDelivr shows current versions; pin if you want.
-  const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"); :contentReference[oaicite:0]{index=0}
+  const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   const { error } = await supabase.from("donations").insert({
     username,
-    amount: Number(amount),
+    amount,
+    name,
+    phone,
+    wish,
   });
 
   if (error) return { ok: false, error: error.message };
   return { ok: true, mode: "supabase" };
 }
 
-// ===== Donation flow =====
-function parseAmount(v) {
-  const n = Number(String(v).replace(/[^\d.]/g, ""));
-  if (!Number.isFinite(n)) return null;
-  if (n <= 0) return null;
-  if (n > 999999) return null;
-  return Math.round(n * 100) / 100;
-}
-
-document.querySelectorAll(".q").forEach((btn) => {
-  btn.addEventListener("click", () => {
-    amtEl.value = btn.dataset.amt || "";
-    amtEl.focus();
-  });
-});
-
-donateBtn.addEventListener("click", async () => {
-  const amt = parseAmount(amtEl.value);
-  if (amt == null) {
-    statusEl.textContent = "请输入有效金额。";
+// ===== Pay =====
+payBtn.addEventListener("click", async () => {
+  const amount = parseAmount();
+  if (amount == null) {
+    statusEl.textContent = "请选择金额或输入金额。";
     return;
   }
 
-  donateBtn.disabled = true;
-  statusEl.textContent = "处理中…";
+  const name = (nameInput.value || "").trim() || username;
+  const phone = (phoneInput.value || "").trim();
+  const wish = (wishInput.value || "").trim();
 
-  // Fake balance decrease
-  balance = Math.max(0, balance - amt);
-  balEl.textContent = `¥ ${balance.toFixed(2)}`;
+  payBtn.disabled = true;
+  statusEl.textContent = "正在唤起微信支付…（演示）";
 
-  const res = await postDonationToBackend({ username, amount: amt });
+  const res = await postDonation({ username, amount, name, phone, wish });
 
   if (!res.ok) {
     statusEl.textContent = `失败：${res.error || "未知错误"}`;
-    donateBtn.disabled = false;
+    payBtn.disabled = false;
     return;
   }
 
-  // Stop ads after first successful “donation”
-  adsEnabled = false;
-  localStorage.setItem(LS_DONATED, "yes");
-  clearTimeout(adTimer);
-  hideAd();
-
   statusEl.textContent =
     res.mode === "supabase"
-      ? "供奉成功。已同步至主殿。"
-      : "供奉成功（演示模式）。";
+      ? "支付成功。功德已记录，将显像于主殿。"
+      : "支付成功（演示模式）。已向主殿广播。";
 
-  // In same-device cases, broadcast to any open shrine tab
+  // Local broadcast (for testing): shrine listens on "gongde"
   if ("BroadcastChannel" in window) {
     const chan = new BroadcastChannel("gongde");
-    chan.postMessage({ type: "donation", username, amount: amt });
+    chan.postMessage({ type: "donation", username: name, amount });
     chan.close();
   }
 
-  // tiny “receipt” delay then re-enable for multiple donations
   setTimeout(() => {
-    donateBtn.disabled = false;
-    amtEl.value = "";
-    amtEl.focus();
-  }, 600);
+    payBtn.disabled = false;
+  }, 700);
 });
