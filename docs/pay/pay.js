@@ -139,22 +139,47 @@ function scheduleAd(){
 }
 
 function showAd(){
-  // Reuse your existing modal UI (no new HTML needed)
-  openModal(
-    "Limited-time alignment boost available.\n" +
-    "Advance now to keep momentum and improve outcomes.\n\n" +
-    "Tap OK to continue."
-  );
+  // build an ugly popup like the reference image (no title line)
+  const offer = Math.max(1, Math.floor(Math.random() * 900) + 88); // $88–$988-ish
 
-  // Make it feel like an ad: don't reset progress when closing
-  // (We’ll override close handlers for ad-only display)
-  const oldClose = closeModal;
-  closeModal = function(){
+  // IMPORTANT: use innerHTML so we can style it
+  modalBody.innerHTML = `
+    <div class="ad-wrap">
+      <div class="ad-line" style="text-align:center;">
+        LIMITED ACCESS CREDIT
+      </div>
+
+      <div class="ad-line ad-amount">
+        $${offer}
+      </div>
+
+      <div class="ad-line" style="text-align:center;">
+        Advance to improve outcomes.<br/>
+        Maintain alignment to keep momentum.
+      </div>
+
+      <button class="ad-cta" id="adCtaBtn">
+        MAKE OFFERING + PROGRESS FORTH
+      </button>
+    </div>
+  `;
+
+  modal.setAttribute("aria-hidden", "false");
+
+  // Clicking CTA just closes the ad (or you can focus the amount input)
+  document.getElementById("adCtaBtn")?.addEventListener("click", () => {
     modal.setAttribute("aria-hidden", "true");
-    // restore original close function after this close
-    closeModal = oldClose;
-  };
+    amountInput?.focus?.();
+  }, { once: true });
+
+  // Make closing NOT reset progress (your original close handlers reset)
+  const keep = () => { modal.setAttribute("aria-hidden", "true"); };
+
+  modalClose.onclick = keep;
+  modalX.onclick = keep;
+  modalOk.onclick = keep;
 }
+
 
 // start the ad loop
 scheduleAd();
