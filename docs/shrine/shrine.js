@@ -268,11 +268,10 @@ window.gongdeDonate = function gongdeDonate({ username, amount }) {
 };
 // ===== Supabase Realtime: receive phone donations =====
 async function startRealtime() {
-  const SUPABASE_URL = "https://gsmkpxxjzrtpdvgocbex.supabase.co";      // e.g. "https://xxxx.supabase.co"
-  const SUPABASE_ANON_KEY = "sb_publishable_bUv7a7CgIOiIMRHjMhIAFg_8W_IHlGw"; // public anon key
-
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    console.warn("[realtime] missing Supabase keys");
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY ||
+      SUPABASE_URL.includes("YOURPROJECT") ||
+      SUPABASE_ANON_KEY.includes("YOUR_")) {
+    console.warn("[realtime] Supabase keys are still placeholders. Phone donations will NOT appear.");
     return;
   }
 
@@ -282,7 +281,7 @@ async function startRealtime() {
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  supabase
+  const channel = supabase
     .channel("gongde-donations")
     .on(
       "postgres_changes",
@@ -290,23 +289,27 @@ async function startRealtime() {
       (payload) => {
         const row = payload.new;
         const name = row.name || row.username || "善信";
-        const amount = row.amount || 0;
+        const amount = row.amount ?? 0;
 
-        console.log("[realtime] donation from phone:", row);
+        console.log("[realtime] donation received:", row);
 
-        // 🔴 THIS is the important line
         window.gongdeDonate({
           username: String(name),
-          amount: String(amount)
+          amount: String(amount),
         });
       }
     )
     .subscribe((status) => {
       console.log("[realtime] status:", status);
+      if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        console.warn("[realtime] subscription problem — check Realtime publication + RLS select policy.");
+      }
     });
+
+  // helpful debug
+  window.__supabaseChannel = channel;
 }
 
-// start listening
 startRealtime();
 
 const chan = ("BroadcastChannel" in window) ? new BroadcastChannel("gongde") : null;
