@@ -146,10 +146,19 @@ payBtn.addEventListener("click", async () => {
     const sb = await getSupabase();
 
     // ✅ FIX: your column is `username`, not `name`
+    const safeUsername =
+      (typeof username === "string" && username.trim()) ? username.trim() : makeUsername();
+
+    console.log("PAY VERSION flat1b", Date.now(), { safeUsername, amt });
+
     const { error } = await sb.from("donations").insert({
-      username: username,
-      amount: amt
+      username: safeUsername,
+      name: safeUsername,     // keep both filled
+      amount: amt,
+      phone: "",              // optional fields: keep harmless
+      wish: ""
     });
+
 
     if (error) throw error;
 
