@@ -5,29 +5,34 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>功德 Shrine</title>
   <link rel="stylesheet" href="./shrine.css" />
+
+  <!-- Import map so "three" resolves on GitHub Pages -->
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
 </head>
 <body>
   <div id="app">
-    <!-- 3D canvas goes here -->
     <canvas id="scene"></canvas>
 
-    <!-- Collage overlay -->
     <div id="collage">
-      <img class="scrap" src="/gongdewuliang/assets/images/scrap1.png" alt="" />
-      <img class="scrap" src="/gongdewuliang/assets/images/scrap2.png" alt="" />
+      <!-- Replace these with your real images (paths must exist) -->
+      <img class="scrap" src="/gongdewuliang/images/scrap1.png" alt="" />
+      <img class="scrap" src="/gongdewuliang/images/scrap2.png" alt="" />
       <div class="stamp">功德无量</div>
     </div>
 
-    <!-- Mini figurines wall -->
     <div id="wall">
       <div id="wall-title">千佛墙 / 1-minute blessings</div>
       <div id="tiles"></div>
     </div>
 
-    <!-- Audio gate -->
     <button id="enable-audio">🔊 Enable Blessings Audio</button>
-
-    <!-- Debug controls (we’ll remove later) -->
     <button id="test-donate">+ Test Donation</button>
   </div>
 
