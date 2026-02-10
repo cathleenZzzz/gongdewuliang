@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
 
-console.log("SHRINE JS — white + glowing wall", Date.now());
+console.log("SHRINE JS — 2D mask wall + 3D idol", Date.now());
 
 // ====== CONFIG ======
 const BASE = "/gongdewuliang";
@@ -16,103 +16,250 @@ const PATHS = {
   metallic: `${MODEL_DIR}texture_metallic.png`,
 };
 
-// Main idol size
-const MAIN_TARGET = 18.0;
-
-// Wall layout (grid behind main idol)
-const WALL = {
-  cols: 30,
-  rows: 14,
-  spacingX: 1.15,
-  spacingY: 1.05,
-  z: -14,          // behind main statue
-  yBase: 1.1,      // start height
-  jitter: 0.06,    // tiny random variance so it feels alive
-};
+const REVEAL_MS = 60_000;
+const STORAGE_KEY = "gongde_wall_v1";
 
 // ====== DOM ======
+const wallEl = document.getElementById("buddha-wall");
 const canvas = document.getElementById("scene");
+const testBtn = document.getElementById("test-donate");
 
-// ====== THREE SETUP ======
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+// ====== AUDIO (default ON) ======
+function speak(text) {
+  if (!("speechSynthesis" in window)) return;
+  const u = new SpeechSynthesisUtterance(text);
+  u.rate = 1.02;
+  u.pitch = 0.72;
+  window.speechSynthesis.cancel();
+  window.speechSynthesis.speak(u);
+}
+
+// ====== WALL STATE ======
+/**
+ * donations: Map tileIndex -> { username, amount, expiresAt }
+ */
+const donations = new Map();
+/**
+ * timers: Map tileIndex -> { expireTimer, cleanupTimer }
+ */
+const timers = new Map();
+
+function now() { return Date.now(); }
+
+function saveState() {
+  const payload = [];
+  for (const [idx, rec] of donations.entries()) {
+    payload.push([idx, rec]);
+  }
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+}
+
+function loadState() {
+  donations.clear();
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return;
+    const arr = JSON.parse(raw);
+    if (!Array.isArray(arr)) return;
+    for (const [idx, rec] of arr) {
+      if (!rec || typeof rec.expiresAt !== "number") continue;
+      // drop expired
+      if (rec.expiresAt <= now()) continue;
+      donations.set(Number(idx), rec);
+    }
+  } catch (_) {
+    // ignore
+  }
+}
+
+function clearTileTimers(idx) {
+  const t = timers.get(idx);
+  if (!t) return;
+  clearTimeout(t.expireTimer);
+  clearTimeout(t.cleanupTimer);
+  timers.delete(idx);
+}
+
+function applyTileState(idx) {
+  const tile = wallEl.querySelector(`.wall-tile[data-idx="${idx}"]`);
+  if (!tile) return;
+
+  const rec = donations.get(idx);
+  const label = tile.querySelector(".label");
+
+  tile.classList.remove("revealed", "expiring");
+  if (label) label.textContent = "";
+
+  if (!rec) return;
+
+  // show donor
+  if (label) label.textContent = `${rec.username}  ¥${rec.amount}`;
+  tile.classList.add("revealed");
+
+  // schedule expiration
+  clearTileTimers(idx);
+
+  const msLeft = Math.max(0, rec.expiresAt - now());
+
+  // At expiry moment, fade cover back in (expiring)
+  const expireTimer = setTimeout(() => {
+    tile.classList.remove("revealed");
+    tile.classList.add("expiring");
+  }, msLeft);
+
+  // After fade completes, clean record
+  const cleanupTimer = setTimeout(() => {
+    donations.delete(idx);
+    saveState();
+    tile.classList.remove("expiring");
+    if (label) label.textContent = "";
+  }, msLeft + 1600);
+
+  timers.set(idx, { expireTimer, cleanupTimer });
+}
+
+function revealAnyTile({ username, amount }) {
+  // Choose a currently hidden tile (not in donations)
+  const tiles = wallEl.querySelectorAll(".wall-tile");
+  const hidden = [];
+  tiles.forEach((t) => {
+    const idx = Number(t.dataset.idx);
+    if (!donations.has(idx)) hidden.push(idx);
+  });
+
+  // If all are used, overwrite the oldest-expiring
+  let idx;
+  if (hidden.length > 0) {
+    idx = hidden[Math.floor(Math.random() * hidden.length)];
+  } else {
+    let bestIdx = 0;
+    let bestExpires = Infinity;
+    for (const [k, rec] of donations.entries()) {
+      if (rec.expiresAt < bestExpires) {
+        bestExpires = rec.expiresAt;
+        bestIdx = k;
+      }
+    }
+    idx = bestIdx;
+  }
+
+  const rec = { username, amount, expiresAt: now() + REVEAL_MS };
+  donations.set(idx, rec);
+  saveState();
+  applyTileState(idx);
+
+  return idx; // ✅ this is the mapping you want
+}
+
+// Public hook (so /pay can call it later)
+window.gongdeDonate = function gongdeDonate({ username, amount }) {
+  const tileIndex = revealAnyTile({ username, amount });
+  speak(`感谢善信 ${username}，供奉 ${amount} 元。功德无量。`);
+  return { tileIndex };
+};
+
+// Listen for /pay via BroadcastChannel
+const chan = ("BroadcastChannel" in window) ? new BroadcastChannel("gongde") : null;
+if (chan) {
+  chan.onmessage = (ev) => {
+    const msg = ev.data;
+    if (!msg || msg.type !== "donation") return;
+    const username = String(msg.username || "善信");
+    const amount = String(msg.amount || "0");
+    window.gongdeDonate({ username, amount });
+  };
+}
+
+// ====== BUILD WALL GRID (fills screen) ======
+function computeWallCols() {
+  // choose tile size based on viewport
+  const w = window.innerWidth;
+  if (w >= 1400) return 34;
+  if (w >= 1100) return 30;
+  if (w >= 900) return 26;
+  if (w >= 700) return 22;
+  return 16;
+}
+
+function buildWall() {
+  // Clear existing timers (will reapply after rebuild)
+  for (const idx of timers.keys()) clearTileTimers(idx);
+  timers.clear();
+
+  wallEl.innerHTML = "";
+
+  const cols = computeWallCols();
+  wallEl.style.setProperty("--wall-cols", String(cols));
+
+  // approximate rows from height; we’ll just fill enough
+  const tilePx = (window.innerWidth - 36) / cols; // 18px padding each side
+  const rows = Math.ceil((window.innerHeight - 36) / (tilePx + 8)) + 2;
+
+  let idx = 0;
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const tile = document.createElement("div");
+      tile.className = "wall-tile";
+      tile.dataset.idx = String(idx);
+
+      const sigil = document.createElement("div");
+      sigil.className = "sigil";
+
+      const label = document.createElement("div");
+      label.className = "label";
+
+      const cover = document.createElement("div");
+      cover.className = "cover";
+
+      tile.appendChild(sigil);
+      tile.appendChild(label);
+      tile.appendChild(cover);
+
+      wallEl.appendChild(tile);
+      idx++;
+    }
+  }
+
+  // Restore any active donation reveals onto rebuilt tiles
+  for (const key of donations.keys()) applyTileState(key);
+}
+
+// ====== THREE (3D idol only) ======
+const renderer = new THREE.WebGLRenderer({
+  canvas,
+  antialias: true,
+  alpha: true, // ✅ transparent so we see the wall behind
+});
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.0;
 
 const scene = new THREE.Scene();
-// ✅ white background
-scene.background = new THREE.Color(0xffffff);
+// IMPORTANT: transparent background
+scene.background = null;
 
 const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 5000);
-// pulled back to fit main + wall
-camera.position.set(0, 10.5, 46);
+camera.position.set(0, 11.0, 46.0);
 
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 controls.enablePan = false;
-controls.target.set(0, 7.0, 0);
+controls.target.set(0, 8.0, 0);
 controls.update();
 
-// ====== LIGHTS (slightly warmer) ======
-scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+// Warm-ish lights (gentle)
+scene.add(new THREE.AmbientLight(0xffffff, 0.62));
 
-const warmKey = new THREE.DirectionalLight(0xfff1dd, 1.15); // warm-ish
-warmKey.position.set(5, 9, 7);
+const warmKey = new THREE.DirectionalLight(0xfff1dd, 1.05);
+warmKey.position.set(6, 10, 8);
 scene.add(warmKey);
 
-const coolFill = new THREE.DirectionalLight(0xeaf0ff, 0.35);
-coolFill.position.set(-6, 5, -6);
-scene.add(coolFill);
+const fill = new THREE.DirectionalLight(0xeaf0ff, 0.25);
+fill.position.set(-7, 6, -7);
+scene.add(fill);
 
-// ====== GLOWING 千佛墙 (behind main figure) ======
-const smallGeo = new THREE.IcosahedronGeometry(0.18, 1);
-// Bright emissive so it glows even on white background
-const smallMat = new THREE.MeshStandardMaterial({
-  color: 0xffffff,
-  emissive: new THREE.Color(0xffffff),
-  emissiveIntensity: 1.6,
-  metalness: 0.0,
-  roughness: 0.35,
-});
-
-const count = WALL.cols * WALL.rows;
-const wall = new THREE.InstancedMesh(smallGeo, smallMat, count);
-wall.instanceMatrix.setUsage(THREE.StaticDrawUsage);
-
-const dummy = new THREE.Object3D();
-let i = 0;
-
-const totalW = (WALL.cols - 1) * WALL.spacingX;
-const totalH = (WALL.rows - 1) * WALL.spacingY;
-
-for (let r = 0; r < WALL.rows; r++) {
-  for (let c = 0; c < WALL.cols; c++) {
-    const x = (c * WALL.spacingX) - totalW / 2;
-    const y = WALL.yBase + (r * WALL.spacingY);
-    const z = WALL.z;
-
-    // tiny jitter to avoid perfect grid feel
-    const jx = (Math.random() - 0.5) * WALL.jitter;
-    const jy = (Math.random() - 0.5) * WALL.jitter;
-    const jz = (Math.random() - 0.5) * WALL.jitter;
-
-    dummy.position.set(x + jx, y + jy, z + jz);
-
-    // no rotation (static), but give slight random facing variance
-    dummy.rotation.set(0, (Math.random() - 0.5) * 0.25, 0);
-
-    // slight size variation
-    const s = 0.8 + Math.random() * 0.5;
-    dummy.scale.setScalar(s);
-
-    dummy.updateMatrix();
-    wall.setMatrixAt(i++, dummy.matrix);
-  }
-}
-scene.add(wall);
-
-// ====== LOAD TEXTURES + MAIN OBJ ======
+// Load textures + OBJ
 const manager = new THREE.LoadingManager();
 manager.onError = (url) => console.error("[load] failed:", url);
 const texLoader = new THREE.TextureLoader(manager);
@@ -155,78 +302,49 @@ objLoader.load(
       }
     });
 
-    // bounds before scaling
+    // center and scale
     const box = new THREE.Box3().setFromObject(obj);
     const size = new THREE.Vector3();
     box.getSize(size);
     const center = new THREE.Vector3();
     box.getCenter(center);
 
-    // center X/Z
     obj.position.x -= center.x;
     obj.position.z -= center.z;
 
-    // scale big
     const maxDim = Math.max(size.x, size.y, size.z) || 1;
-    const s = MAIN_TARGET / maxDim;
-    obj.scale.setScalar(s);
+    obj.scale.setScalar(18.0 / maxDim);
 
-    // re-bounds after scaling
     const box2 = new THREE.Box3().setFromObject(obj);
-    const minY = box2.min.y;
+    obj.position.y += (0.0 - box2.min.y);
 
-    // set base on a “floor” around y=0 (white stage)
-    obj.position.y += (0.0 - minY);
-
-    // face forward
     obj.rotation.y = Math.PI;
 
     scene.add(obj);
     godObj = obj;
 
-    // set view nicely (no need to move wall)
-    controls.reset();
-    controls.target.set(0, 8.0, 0);
-    camera.position.set(0, 11.0, 46.0);
-    camera.lookAt(controls.target);
-    controls.update();
-
-    console.log("[obj] loaded main idol:", PATHS.obj);
+    console.log("[obj] loaded:", PATHS.obj);
   },
   undefined,
   (err) => console.error("[obj] FAILED:", err)
 );
 
-// ====== AUDIO (default ON) ======
-let speechEnabled = true;
-
-function speak(text) {
-  if (!speechEnabled || !("speechSynthesis" in window)) return;
-  const u = new SpeechSynthesisUtterance(text);
-  u.rate = 1.02;
-  u.pitch = 0.72;
-  window.speechSynthesis.cancel();
-  window.speechSynthesis.speak(u);
-}
-
-// ====== DONATION “TEST” (kept, no UI text wall) ======
-function onDonationEvent({ username, amount }) {
-  // brief “flash blessing” effect on the wall
-  const prev = smallMat.emissiveIntensity;
-  smallMat.emissiveIntensity = 2.8;
-  setTimeout(() => (smallMat.emissiveIntensity = prev), 240);
-
-  speak(`感谢善信 ${username}，供奉 ${amount} 元。功德无量。`);
-}
-
-document.getElementById("test-donate").addEventListener("click", () => {
+// ====== TEST DONATION ======
+testBtn?.addEventListener("click", () => {
   const username = "善信_" + Math.random().toString(16).slice(2, 6).toUpperCase();
   const amount = (Math.random() * 90 + 1).toFixed(2);
-  onDonationEvent({ username, amount });
+
+  // This returns the tile index mapping (for debug)
+  const res = window.gongdeDonate({ username, amount });
+  console.log("[donation] mapped to tile:", res.tileIndex);
 });
 
 // ====== Resize ======
 function resize() {
+  // rebuild wall to keep it filling screen
+  buildWall();
+
+  // resize renderer/camera
   const w = canvas.clientWidth;
   const h = canvas.clientHeight;
   renderer.setSize(w, h, false);
@@ -234,14 +352,14 @@ function resize() {
   camera.updateProjectionMatrix();
 }
 window.addEventListener("resize", resize);
+
+// ====== INIT ======
+loadState();
+buildWall();
 resize();
 
-// ====== RENDER LOOP ======
+// ====== Render loop ======
 renderer.setAnimationLoop(() => {
   controls.update();
-
-  // Main idol can stay still; wall should not rotate
-  // If you later want slow ceremonial rotation, we can add it back.
-
   renderer.render(scene, camera);
 });
