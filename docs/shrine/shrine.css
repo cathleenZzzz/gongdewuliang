@@ -8,23 +8,129 @@ html, body {
 
 #app {
   position: relative;
-  height: 100%;
+  width: 100vw;
+  height: 100vh;
   overflow: hidden;
   background: #ffffff;
 }
 
-/* 3D canvas full screen */
+/* ===== WALL (2D grid) ===== */
+#buddha-wall {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+
+  display: grid;
+  /* columns controlled by JS via CSS var; fallback here */
+  grid-template-columns: repeat(var(--wall-cols, 28), 1fr);
+  gap: 8px;
+
+  padding: 18px;
+  box-sizing: border-box;
+
+  /* subtle paper-ish background */
+  background:
+    radial-gradient(1200px 700px at 50% 0%, rgba(255, 240, 220, 0.55), rgba(255,255,255,0) 60%),
+    radial-gradient(900px 500px at 20% 90%, rgba(240, 245, 255, 0.55), rgba(255,255,255,0) 55%),
+    #ffffff;
+}
+
+/* each tile is a "figurine slot" */
+.wall-tile {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  border-radius: 10px;
+  overflow: hidden;
+
+  /* bright glow body */
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.95), rgba(250, 250, 255, 0.45) 55%, rgba(255,255,255,0.0) 75%),
+    radial-gradient(circle at 50% 55%, rgba(255, 225, 190, 0.35), rgba(255,255,255,0) 70%);
+
+  /* faint grid border */
+  outline: 1px solid rgba(0,0,0,0.06);
+}
+
+/* the "figurine" graphic (no external image needed) */
+.wall-tile .sigil {
+  position: absolute;
+  inset: 0;
+  opacity: 0.95;
+
+  /* simple statue silhouette vibe using gradients */
+  background:
+    radial-gradient(circle at 50% 32%, rgba(255,255,255,0.92) 0 18%, rgba(255,255,255,0) 19%),
+    radial-gradient(circle at 50% 56%, rgba(255,255,255,0.80) 0 22%, rgba(255,255,255,0) 23%),
+    radial-gradient(ellipse at 50% 80%, rgba(255,255,255,0.55) 0 20%, rgba(255,255,255,0) 21%);
+  filter: drop-shadow(0 0 10px rgba(255, 220, 190, 0.55));
+}
+
+/* donor label (appears only when revealed) */
+.wall-tile .label {
+  position: absolute;
+  left: 6px;
+  right: 6px;
+  bottom: 6px;
+  font-size: 10px;
+  line-height: 1.05;
+  letter-spacing: 0.2px;
+
+  color: rgba(0,0,0,0.72);
+  text-align: center;
+  text-shadow: 0 0 10px rgba(255,255,255,0.9);
+  opacity: 0;
+  transform: translateY(3px);
+  transition: opacity 280ms ease, transform 280ms ease;
+}
+
+/* the cover layer that hides each tile until donation */
+.wall-tile .cover {
+  position: absolute;
+  inset: 0;
+
+  /* paper/veil cover */
+  background:
+    linear-gradient(135deg, rgba(255,255,255,0.96), rgba(245,245,245,0.92)),
+    repeating-linear-gradient(
+      0deg,
+      rgba(0,0,0,0.02) 0px,
+      rgba(0,0,0,0.02) 1px,
+      rgba(255,255,255,0) 2px,
+      rgba(255,255,255,0) 6px
+    );
+
+  opacity: 1;
+  transition: opacity 420ms ease;
+}
+
+/* revealed state: cover fades away, label fades in */
+.wall-tile.revealed .cover { opacity: 0; }
+.wall-tile.revealed .label {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* end-of-life fade back: we’ll animate cover opacity back up */
+.wall-tile.expiring .cover { opacity: 1; transition: opacity 1400ms ease; }
+.wall-tile.expiring .label { opacity: 0; transform: translateY(2px); transition: opacity 600ms ease, transform 600ms ease; }
+
+/* ===== 3D canvas over wall ===== */
 #scene {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
   width: 100%;
   height: 100%;
   display: block;
 }
 
-/* Keep only the test button (clean, gallery-like) */
+/* test button */
 #test-donate {
   position: absolute;
   right: 16px;
   bottom: 16px;
+  z-index: 2;
 
   padding: 10px 14px;
   border-radius: 12px;
@@ -41,14 +147,5 @@ html, body {
   transition: transform 120ms ease, box-shadow 120ms ease, opacity 120ms ease;
   opacity: 0.92;
 }
-
-#test-donate:hover {
-  opacity: 1;
-  transform: translateY(-1px);
-  box-shadow: 0 10px 28px rgba(0,0,0,0.14);
-}
-
-#test-donate:active {
-  transform: translateY(0px);
-  box-shadow: 0 6px 18px rgba(0,0,0,0.10);
-}
+#test-donate:hover { opacity: 1; transform: translateY(-1px); box-shadow: 0 10px 28px rgba(0,0,0,0.14); }
+#test-donate:active { transform: translateY(0px); box-shadow: 0 6px 18px rgba(0,0,0,0.10); }
