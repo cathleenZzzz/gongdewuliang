@@ -2,14 +2,7 @@ html, body {
   height: 100%;
   margin: 0;
   overflow: hidden;
-
-  /* warm temple wall vibe (not black) */
-  background:
-    radial-gradient(1100px 700px at 55% -10%, rgba(255, 206, 150, 0.55), rgba(255,255,255,0) 60%),
-    radial-gradient(900px 600px at 18% 85%, rgba(255, 180, 110, 0.35), rgba(255,255,255,0) 55%),
-    radial-gradient(1000px 900px at 85% 80%, rgba(200, 150, 90, 0.22), rgba(255,255,255,0) 60%),
-    #f6f1e8;
-
+  background: #ffffff;
   color: #111;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
 }
@@ -20,7 +13,7 @@ html, body {
   height: 100vh;
 }
 
-/* 3D canvas on top */
+/* 3D canvas */
 #scene {
   position: absolute;
   inset: 0;
@@ -41,7 +34,7 @@ html, body {
   border-radius: 12px;
 
   border: 1px solid rgba(0,0,0,0.12);
-  background: rgba(255,255,255,0.82);
+  background: rgba(255,255,255,0.92);
   color: #111;
 
   cursor: pointer;
