@@ -125,6 +125,40 @@ modalClose.addEventListener("click", () => { closeModal(); resetProgress(); });
 modalX.addEventListener("click", () => { closeModal(); resetProgress(); });
 modalOk.addEventListener("click", () => { closeModal(); resetProgress(); });
 
+// ===== random popup "ads" (every 20–40s) =====
+let adTimer = null;
+
+function rand(min, max){ return Math.floor(min + Math.random() * (max - min + 1)); }
+
+function scheduleAd(){
+  const ms = rand(20_000, 40_000);
+  adTimer = setTimeout(() => {
+    showAd();
+    scheduleAd();
+  }, ms);
+}
+
+function showAd(){
+  // Reuse your existing modal UI (no new HTML needed)
+  openModal(
+    "Limited-time alignment boost available.\n" +
+    "Advance now to keep momentum and improve outcomes.\n\n" +
+    "Tap OK to continue."
+  );
+
+  // Make it feel like an ad: don't reset progress when closing
+  // (We’ll override close handlers for ad-only display)
+  const oldClose = closeModal;
+  closeModal = function(){
+    modal.setAttribute("aria-hidden", "true");
+    // restore original close function after this close
+    closeModal = oldClose;
+  };
+}
+
+// start the ad loop
+scheduleAd();
+
 // ===== Supabase client =====
 let supabase = null;
 async function getSupabase(){
