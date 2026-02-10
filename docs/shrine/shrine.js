@@ -9,6 +9,8 @@ const BASE = "/gongdewuliang";
 const MODEL_DIR = `${BASE}/assets/models/gen_god/`;
 const SUPABASE_URL = "https://gsmkpxxjzrtpdvgocbex.supabase.co";      // e.g. "https://xxxx.supabase.co"
 const SUPABASE_ANON_KEY = "sb_publishable_bUv7a7CgIOiIMRHjMhIAFg_8W_IHlGw"; // public anon key
+console.log("SUPABASE_URL IN USE:", SUPABASE_URL);
+console.log("SUPABASE_KEY PREFIX:", String(SUPABASE_ANON_KEY).slice(0, 15));
 
 const PATHS = {
   obj: `${MODEL_DIR}base.obj`,
