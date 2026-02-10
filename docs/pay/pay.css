@@ -4,25 +4,22 @@
   --ink: #111111;
   --muted: rgba(0,0,0,0.55);
   --line: rgba(0,0,0,0.16);
-  --blue: #2f6cff;      /* terminal blue accent */
+  --blue: #2f6cff;
   --blueSoft: rgba(47,108,255,0.14);
   --shadow: 0 10px 26px rgba(0,0,0,0.12);
 }
 
-*{ box-sizing:border-box; }
+*{ box-sizing:border-box; border-radius: 0 !important; }
 
 html,body{
   height:100%;
   margin:0;
   background: var(--bg);
   color: var(--ink);
-
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
 
-  /* mobile consistency */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
-
   overscroll-behavior: none;
 }
 
@@ -54,14 +51,13 @@ button, input{
 }
 
 .title{
-  font-weight: 700;
+  font-weight: 800;
   letter-spacing: 0.2px;
 }
 
 .icon{
   width: 38px;
   height: 38px;
-  border-radius: 12px;
   border: 1px solid var(--line);
   background: var(--paper);
   display:grid;
@@ -75,7 +71,6 @@ button, input{
 .notice{
   border: 1px solid var(--line);
   background: var(--paper);
-  border-radius: 14px;
   padding: 10px 12px;
   font-size: 13px;
   line-height: 1.35;
@@ -92,7 +87,6 @@ button, input{
 .card{
   background: var(--paper);
   border: 1px solid var(--line);
-  border-radius: 18px;
   padding: 14px;
   box-shadow: 0 10px 26px rgba(0,0,0,0.08);
 }
@@ -112,7 +106,7 @@ button, input{
 
 .value{
   font-size: 14px;
-  font-weight: 650;
+  font-weight: 750;
 }
 
 .mono{
@@ -137,7 +131,6 @@ button, input{
 .bar{
   margin: 8px 0;
   height: 10px;
-  border-radius: 999px;
   background: rgba(0,0,0,0.08);
   overflow:hidden;
 }
@@ -145,12 +138,10 @@ button, input{
 .fill{
   height:100%;
   width: 0%;
-  border-radius: 999px;
   background: var(--blue);
   transition: width 220ms ease;
 }
 
-/* presets: simple grid, consistent */
 .presetRow{
   display:grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -161,11 +152,10 @@ button, input{
 .pill{
   width: 100%;
   padding: 11px 12px;
-  border-radius: 14px;
   border: 1px solid var(--line);
   background: var(--paper);
   cursor:pointer;
-  font-weight: 750;
+  font-weight: 850;
   text-align:center;
 }
 
@@ -182,7 +172,6 @@ button, input{
 #amountInput{
   flex:1;
   padding: 12px 12px;
-  border-radius: 14px;
   border: 1px solid var(--line);
   background: var(--paper);
   font-size: 16px; /* prevents iOS zoom */
@@ -191,7 +180,6 @@ button, input{
 
 .ghost{
   padding: 12px 12px;
-  border-radius: 14px;
   border: 1px solid var(--line);
   background: var(--paper);
   cursor:pointer;
@@ -201,11 +189,10 @@ button, input{
   width:100%;
   margin-top: 12px;
   padding: 14px 14px;
-  border-radius: 16px;
   border: 1px solid rgba(0,0,0,0.18);
   background: var(--paper);
   color: var(--ink);
-  font-weight: 850;
+  font-weight: 950;
   cursor:pointer;
   box-shadow: var(--shadow);
 }
@@ -230,139 +217,91 @@ button, input{
   border-top: 1px solid rgba(0,0,0,0.10);
 }
 
-/* modal: flat */
+/* =========================================================
+   MODAL: hide ALL old chrome ("Outcome Update" frame etc.)
+   and only show the red/yellow box in #modalBody.
+   ========================================================= */
+
 .modal{
   position: fixed;
   inset: 0;
+  z-index: 9999;
   display:none;
-  z-index: 50;
 }
 .modal[aria-hidden="false"]{ display:block; }
 
+/* dim background */
 .modalBackdrop{
   position:absolute;
   inset:0;
-  background: rgba(0,0,0,0.35);
+  background: rgba(0,0,0,0.55);
 }
 
-.modalCard{
-  position:absolute;
-  left: 50%;
-  top: 16%;
-  transform: translateX(-50%);
-  width: min(420px, calc(100% - 24px));
-  background: var(--paper);
-  border: 1px solid var(--line);
-  border-radius: 18px;
-  box-shadow: var(--shadow);
-  padding: 12px;
+/* HARD KILL old modal layout if it exists in your HTML */
+.modalCard,
+.modalHeader,
+.modalTitle,
+.modalBtn,
+#modalClose,
+#modalX,
+#modalOk{
+  display:none !important;
 }
 
-.modalHeader{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  padding: 6px 4px 10px;
+/* If you have any “continue” strip / extra footer in HTML, hide it */
+.modalFooter,
+.modalActions,
+.continue,
+#continueBtn{
+  display:none !important;
 }
 
-.modalTitle{
-  font-weight: 850;
-}
+/* =========================================================
+   RED/YELLOW/WHITE "UGLY POPUP" — we render this inside #modalBody
+   ========================================================= */
 
 .modalBody{
-  padding: 10px 6px 12px;
-  color: rgba(0,0,0,0.78);
-  line-height: 1.35;
-}
-
-.modalBtn{
-  width:100%;
-  padding: 12px 14px;
-  border-radius: 14px;
-  border: 1px solid rgba(0,0,0,0.18);
-  background: var(--paper);
-  cursor:pointer;
-  font-weight: 800;
-  box-shadow: 0 8px 20px rgba(0,0,0,0.10);
-}
-
-@media (max-width: 380px){
-  .card{ padding: 12px; }
-  .presetRow{ gap: 8px; }
-  .pill{ padding: 10px 10px; }
-}
-button, input, .pill, #modal, .modal, .card, .panel {
-  border-radius: 0 !important;
-}
-
-/* ===== UGLY POPUP STYLE (ad mode) ===== */
-#modal[aria-hidden="true"] { display: none; }
-#modal {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-}
-
-#modal::before{
-  content:"";
-  position:absolute;
-  inset:0;
-  background: rgba(0,0,0,0.55); /* dim behind like a spam popup */
-}
-
-/* assume you have a modal panel element; if not, apply to modal itself */
-#modal .panel, 
-#modal .modal-panel,
-#modal .box {
-  position: relative;
+  position: absolute;
+  left: 50%;
+  top: 14vh;
+  transform: translateX(-50%);
   width: min(360px, calc(100vw - 24px));
-  margin: 14vh auto 0;
-  background: #ff2a2a;             /* loud red */
-  border: 5px solid #111;          /* thick outline */
-  box-shadow: 0 18px 0 rgba(0,0,0,0.22), 0 24px 60px rgba(0,0,0,0.55);
-  padding: 14px 12px;
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-}
 
-/* If your modal structure is just #modalBody inside #modal (no panel wrapper),
-   use this fallback: */
-#modalBody {
-  position: relative;
-  width: min(360px, calc(100vw - 24px));
-  margin: 14vh auto 0;
+  /* outer red frame */
   background: #ff2a2a;
   border: 5px solid #111;
   box-shadow: 0 18px 0 rgba(0,0,0,0.22), 0 24px 60px rgba(0,0,0,0.55);
   padding: 14px 12px;
 }
 
-/* Ad content layout */
-#modalBody .ad-wrap{
-  background: #ffd400;             /* ugly yellow plate */
+/* inner yellow plate */
+.modalBody .ad-wrap{
+  background: #ffd400;
   border: 3px solid #111;
   padding: 10px;
 }
 
-#modalBody .ad-line{
+/* white lines */
+.modalBody .ad-line{
   background: #fff;
   border: 2px solid #111;
   padding: 8px 10px;
   margin-top: 8px;
   color: #111;
-  font-weight: 800;
+  font-weight: 900;
   font-size: 14px;
   line-height: 1.2;
 }
 
-#modalBody .ad-amount{
-  font-size: 40px;
+.modalBody .ad-amount{
+  font-size: 44px;
   font-weight: 1000;
   letter-spacing: 1px;
   text-align: center;
 }
 
-#modalBody .ad-cta{
+/* CTA */
+.modalBody .ad-cta{
   display:block;
   width:100%;
   margin-top: 10px;
@@ -376,81 +315,23 @@ button, input, .pill, #modal, .modal, .card, .panel {
   cursor: pointer;
 }
 
-/* make close buttons look cheap too */
-#modalClose, #modalX, #modalOk {
-  border: 3px solid #111 !important;
-  background: #fff !important;
-  color: #111 !important;
-  font-weight: 900 !important;
-}
-
-/* ===== HARD-EDGE / NO RADIUS ===== */
-* { border-radius: 0 !important; }
-
-/* ===== MODAL BASE ===== */
-#modal[aria-hidden="true"] { display: none; }
-#modal {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-}
-#modal::before{
-  content:"";
+/* cheap close X */
+.modalBody .ad-close{
   position:absolute;
-  inset:0;
-  background: rgba(0,0,0,0.55);
-}
-
-/* if your modal uses only #modalBody, style that directly */
-#modalBody{
-  position: relative;
-  width: min(360px, calc(100vw - 24px));
-  margin: 14vh auto 0;
-  background: #ff2a2a;
+  top: -12px;
+  right: -12px;
+  width: 44px;
+  height: 44px;
   border: 5px solid #111;
-  box-shadow: 0 18px 0 rgba(0,0,0,0.22), 0 24px 60px rgba(0,0,0,0.55);
-  padding: 14px 12px;
-}
-
-/* ad guts */
-#modalBody .ad-wrap{
-  background: #ffd400;
-  border: 3px solid #111;
-  padding: 10px;
-}
-#modalBody .ad-line{
   background: #fff;
-  border: 2px solid #111;
-  padding: 8px 10px;
-  margin-top: 8px;
   color: #111;
-  font-weight: 800;
-  font-size: 14px;
-  line-height: 1.2;
-}
-#modalBody .ad-amount{
-  font-size: 40px;
   font-weight: 1000;
-  letter-spacing: 1px;
-  text-align: center;
-}
-#modalBody .ad-cta{
-  display:block;
-  width:100%;
-  margin-top: 10px;
-  padding: 12px 10px;
-  background: #ff2a2a;
-  border: 4px solid #111;
-  color: #fff;
-  font-weight: 1000;
-  letter-spacing: 0.6px;
   cursor: pointer;
 }
 
-/* cheap buttons */
-#modalClose, #modalX, #modalOk {
-  border: 3px solid #111 !important;
-  background: #fff !important;
-  color: #111 !important;
-  font-weight: 900 !important;
+@media (max-width: 380px){
+  .card{ padding: 12px; }
+  .presetRow{ gap: 8px; }
+  .pill{ padding: 10px 10px; }
+  .modalBody .ad-amount{ font-size: 40px; }
 }
