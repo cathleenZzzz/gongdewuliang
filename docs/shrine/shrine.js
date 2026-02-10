@@ -26,7 +26,7 @@ const FADE_MS = 5000;     // fade over last 5s (0 = instant)
 const WALL = {
   cols: 14,
   rows: 7,
-  spacingX: 3.2,
+  spacingX: 5.0,
   spacingY: 3.0,
   z: -36.0,
   y0: 1.2,
