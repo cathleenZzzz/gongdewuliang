@@ -30,7 +30,8 @@ renderer.toneMappingExposure = 1.1;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x07070a);
 
-const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 300);
+// ✅ far plane bigger so giant objects don’t vanish
+const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 2000);
 camera.position.set(0, 1.2, 3.2);
 
 const controls = new OrbitControls(camera, canvas);
@@ -119,14 +120,10 @@ let godObj = null;
 objLoader.load(
   PATHS.obj,
   (obj) => {
-    // Apply material
     obj.traverse((child) => {
-      if (child && child.isMesh) {
-        child.material = godMaterial;
-      }
+      if (child && child.isMesh) child.material = godMaterial;
     });
 
-    // --- AUTO-CENTER + AUTO-SCALE so it MUST appear ---
     const box = new THREE.Box3().setFromObject(obj);
     const size = new THREE.Vector3();
     box.getSize(size);
@@ -135,32 +132,29 @@ objLoader.load(
 
     console.log("[obj] bbox size:", size, "center:", center);
 
-    // Move so center goes to origin
     obj.position.sub(center);
-
-    // Lift it so it sits above pedestal (altar height)
     obj.position.y += 1.0;
 
-    // Scale it to a nice visible size
     const maxDim = Math.max(size.x, size.y, size.z);
-    const target = 1.4; // desired “height-ish” in scene units
+
+    // ✅ MAKE IT WAY BIGGER
+    const target = 6.0; // was 1.4
     const s = target / (maxDim || 1);
     obj.scale.setScalar(s);
 
-    // Optional: face forward; if it ends up backwards, keep/remove
     obj.rotation.y = Math.PI;
 
-    // Add to scene
     scene.add(obj);
     godObj = obj;
 
-    // Aim camera & controls at it
     controls.target.set(0, 1.0, 0);
     controls.update();
-    camera.position.set(0, 1.2, 3.2);
+
+    // ✅ Pull camera back so the big model fits
+    camera.position.set(0, 1.4, 9.0);
     camera.lookAt(0, 1.0, 0);
 
-    console.log("[obj] loaded + framed:", PATHS.obj);
+    console.log("[obj] loaded + BIG:", PATHS.obj);
   },
   undefined,
   (err) => console.error("[obj] FAILED:", err)
@@ -217,12 +211,7 @@ document.getElementById("test-donate").addEventListener("click", () => {
 // ====== RENDER LOOP ======
 renderer.setAnimationLoop(() => {
   controls.update();
-
-  // gentle rotation once loaded
   if (godObj) godObj.rotation.y += 0.0012;
-
-  // candle flicker
   candle.intensity = 0.55 + Math.random() * 0.12;
-
   renderer.render(scene, camera);
 });
