@@ -6,7 +6,7 @@ console.log("shrine.js loaded OK");
 
 // ====== CONFIG ======
 const BASE = "/gongdewuliang";
-const MODEL_DIR = `${BASE}/assets/models/gen_god/`; // ✅ correct path
+const MODEL_DIR = `${BASE}/assets/models/gen_god/`;
 
 const PATHS = {
   obj: `${MODEL_DIR}base.obj`,
@@ -30,17 +30,18 @@ renderer.toneMappingExposure = 1.1;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x07070a);
 
-const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 200);
+const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 300);
 camera.position.set(0, 1.2, 3.2);
 
 const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 controls.target.set(0, 1.0, 0);
+controls.update();
 
-// ---- Lights ----
+// ---- Lights (altar vibe) ----
 scene.add(new THREE.AmbientLight(0xffffff, 0.18));
 
-const key = new THREE.SpotLight(0xffe0c0, 2.6, 20, Math.PI * 0.22, 0.5, 1.0);
+const key = new THREE.SpotLight(0xffe0c0, 2.6, 30, Math.PI * 0.22, 0.5, 1.0);
 key.position.set(1.8, 3.6, 2.4);
 key.target.position.set(0, 1.0, 0);
 scene.add(key, key.target);
@@ -49,7 +50,7 @@ const fill = new THREE.DirectionalLight(0xb7c9ff, 0.55);
 fill.position.set(-2.5, 2.0, -2.0);
 scene.add(fill);
 
-const candle = new THREE.PointLight(0xffb07a, 0.6, 6);
+const candle = new THREE.PointLight(0xffb07a, 0.6, 8);
 candle.position.set(0.0, 0.9, 1.0);
 scene.add(candle);
 
@@ -63,14 +64,14 @@ scene.add(pedestal);
 
 // ---- Ground ----
 const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(30, 30),
+  new THREE.PlaneGeometry(40, 40),
   new THREE.MeshStandardMaterial({ color: 0x07060a, roughness: 1 })
 );
 ground.rotation.x = -Math.PI / 2;
 ground.position.y = 0;
 scene.add(ground);
 
-// ---- Resize ----
+// ====== Resize ======
 function resize() {
   const w = canvas.clientWidth;
   const h = canvas.clientHeight;
@@ -81,7 +82,7 @@ function resize() {
 window.addEventListener("resize", resize);
 resize();
 
-// ====== Load OBJ + textures ======
+// ====== LOAD TEXTURES + OBJ ======
 const manager = new THREE.LoadingManager();
 manager.onError = (url) => console.error("[load] failed:", url);
 
@@ -118,26 +119,54 @@ let godObj = null;
 objLoader.load(
   PATHS.obj,
   (obj) => {
-    godObj = obj;
-
+    // Apply material
     obj.traverse((child) => {
       if (child && child.isMesh) {
         child.material = godMaterial;
       }
     });
 
-    obj.scale.setScalar(0.01);      // adjust if needed
-    obj.position.set(0, 0.45, 0);
+    // --- AUTO-CENTER + AUTO-SCALE so it MUST appear ---
+    const box = new THREE.Box3().setFromObject(obj);
+    const size = new THREE.Vector3();
+    box.getSize(size);
+    const center = new THREE.Vector3();
+    box.getCenter(center);
+
+    console.log("[obj] bbox size:", size, "center:", center);
+
+    // Move so center goes to origin
+    obj.position.sub(center);
+
+    // Lift it so it sits above pedestal (altar height)
+    obj.position.y += 1.0;
+
+    // Scale it to a nice visible size
+    const maxDim = Math.max(size.x, size.y, size.z);
+    const target = 1.4; // desired “height-ish” in scene units
+    const s = target / (maxDim || 1);
+    obj.scale.setScalar(s);
+
+    // Optional: face forward; if it ends up backwards, keep/remove
     obj.rotation.y = Math.PI;
 
+    // Add to scene
     scene.add(obj);
-    console.log("[obj] loaded:", PATHS.obj);
+    godObj = obj;
+
+    // Aim camera & controls at it
+    controls.target.set(0, 1.0, 0);
+    controls.update();
+    camera.position.set(0, 1.2, 3.2);
+    camera.lookAt(0, 1.0, 0);
+
+    console.log("[obj] loaded + framed:", PATHS.obj);
   },
   undefined,
   (err) => console.error("[obj] FAILED:", err)
 );
 
-// ====== Donation wall ======
+// ====== DONATION WALL ======
 function escapeHtml(s) {
   return String(s).replace(/[&<>"']/g, (c) => ({
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
@@ -158,7 +187,7 @@ function spawnBlessingTile({ username, amount }) {
   }, 60000);
 }
 
-// ====== Speech ======
+// ====== SPEECH ======
 let speechEnabled = false;
 document.getElementById("enable-audio").addEventListener("click", () => {
   speechEnabled = true;
@@ -185,11 +214,14 @@ document.getElementById("test-donate").addEventListener("click", () => {
   onDonationEvent({ username, amount });
 });
 
-// ====== Render loop ======
+// ====== RENDER LOOP ======
 renderer.setAnimationLoop(() => {
   controls.update();
 
+  // gentle rotation once loaded
   if (godObj) godObj.rotation.y += 0.0012;
+
+  // candle flicker
   candle.intensity = 0.55 + Math.random() * 0.12;
 
   renderer.render(scene, camera);
