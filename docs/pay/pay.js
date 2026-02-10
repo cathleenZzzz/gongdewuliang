@@ -144,10 +144,13 @@ payBtn.addEventListener("click", async () => {
 
   try{
     const sb = await getSupabase();
+
+    // ✅ FIX: your column is `username`, not `name`
     const { error } = await sb.from("donations").insert({
-      name: username,
+      username: username,
       amount: amt
     });
+
     if (error) throw error;
 
     total += amt;
