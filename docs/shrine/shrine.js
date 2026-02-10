@@ -7,8 +7,8 @@ console.log("SHRINE JS — rotate main + solid mini wall", Date.now());
 // ====== CONFIG ======
 const BASE = "/gongdewuliang";
 const MODEL_DIR = `${BASE}/assets/models/gen_god/`;
-const SUPABASE_URL = "https://YOURPROJECT.supabase.co";
-const SUPABASE_ANON_KEY = "YOUR_PUBLISHABLE_OR_ANON_KEY";
+const SUPABASE_URL = "https://gsmkpxxjzrtpdvgocbex.supabase.co";      // e.g. "https://xxxx.supabase.co"
+const SUPABASE_ANON_KEY = "sb_publishable_bUv7a7CgIOiIMRHjMhIAFg_8W_IHlGw"; // public anon key
 
 const PATHS = {
   obj: `${MODEL_DIR}base.obj`,
@@ -268,8 +268,8 @@ window.gongdeDonate = function gongdeDonate({ username, amount }) {
 };
 // ===== Supabase Realtime: receive phone donations =====
 async function startRealtime() {
-  const SUPABASE_URL = "https://YOURPROJECT.supabase.co";
-  const SUPABASE_ANON_KEY = "YOUR_PUBLISHABLE_OR_ANON_KEY";
+  const SUPABASE_URL = "https://gsmkpxxjzrtpdvgocbex.supabase.co";      // e.g. "https://xxxx.supabase.co"
+  const SUPABASE_ANON_KEY = "sb_publishable_bUv7a7CgIOiIMRHjMhIAFg_8W_IHlGw"; // public anon key
 
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     console.warn("[realtime] missing Supabase keys");
