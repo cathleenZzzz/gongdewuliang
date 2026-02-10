@@ -1,11 +1,12 @@
 :root{
-  --bg: #f5f1e8;
-  --paper: #fffaf0;
-  --ink: #1a1a1a;
+  --bg: #f3f3f3;
+  --paper: #ffffff;
+  --ink: #111111;
   --muted: rgba(0,0,0,0.55);
-  --line: rgba(0,0,0,0.12);
-  --shadow: 0 14px 40px rgba(0,0,0,0.18);
-  --glow: rgba(255, 186, 90, 0.35);
+  --line: rgba(0,0,0,0.16);
+  --blue: #2f6cff;      /* terminal blue accent */
+  --blueSoft: rgba(47,108,255,0.14);
+  --shadow: 0 10px 26px rgba(0,0,0,0.12);
 }
 
 *{ box-sizing:border-box; }
@@ -13,16 +14,15 @@
 html,body{
   height:100%;
   margin:0;
+  background: var(--bg);
+  color: var(--ink);
 
-  /* IMPORTANT: stop iOS Safari from “helpfully” resizing text */
+  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+
+  /* mobile consistency */
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
 
-  background: var(--bg);
-  color: var(--ink);
-  font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
-
-  /* prevent rubber-band white gaps from looking broken */
   overscroll-behavior: none;
 }
 
@@ -31,19 +31,14 @@ button, input{
   color: inherit;
   border: none;
   background: none;
-
-  /* IMPORTANT: remove native iOS styles */
   -webkit-appearance: none;
   appearance: none;
 }
 
 .phone{
-  /* Looks like a “terminal” on desktop; still fits on phone */
   width: min(420px, 100%);
   margin: 0 auto;
   min-height: 100vh;
-
-  /* safe-area padding for notches */
   padding:
     calc(14px + env(safe-area-inset-top))
     12px
@@ -55,13 +50,12 @@ button, input{
   align-items:center;
   justify-content:space-between;
   gap:10px;
-  padding: 8px 2px 14px;
+  padding: 8px 2px 12px;
 }
 
 .title{
   font-weight: 700;
   letter-spacing: 0.2px;
-  opacity: 0.92;
 }
 
 .icon{
@@ -69,13 +63,24 @@ button, input{
   height: 38px;
   border-radius: 12px;
   border: 1px solid var(--line);
-  background: rgba(255,255,255,0.85);
+  background: var(--paper);
   display:grid;
   place-items:center;
-  box-shadow: 0 8px 18px rgba(0,0,0,0.06);
   cursor:pointer;
   font-size: 22px;
   line-height: 1;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+}
+
+.notice{
+  border: 1px solid var(--line);
+  background: var(--paper);
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 13px;
+  line-height: 1.35;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.06);
+  margin: 0 0 12px;
 }
 
 .sheet{
@@ -89,12 +94,7 @@ button, input{
   border: 1px solid var(--line);
   border-radius: 18px;
   padding: 14px;
-  box-shadow: 0 12px 28px rgba(0,0,0,0.08);
-}
-
-.card.soft{
-  background: rgba(255,255,255,0.7);
-  box-shadow: none;
+  box-shadow: 0 10px 26px rgba(0,0,0,0.08);
 }
 
 .row{
@@ -119,10 +119,12 @@ button, input{
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
 }
 
+.muted{ color: var(--muted); }
+
 .progressWrap{
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px dashed rgba(0,0,0,0.14);
+  border-top: 1px solid rgba(0,0,0,0.10);
 }
 
 .progressTop, .progressBottom{
@@ -132,27 +134,23 @@ button, input{
   font-size: 12px;
 }
 
-.muted{ color: var(--muted); }
-
 .bar{
   margin: 8px 0;
   height: 10px;
   border-radius: 999px;
   background: rgba(0,0,0,0.08);
   overflow:hidden;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.6);
 }
 
 .fill{
   height:100%;
   width: 0%;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(255,176,70,0.9), rgba(255,120,50,0.9));
-  box-shadow: 0 0 18px var(--glow);
+  background: var(--blue);
   transition: width 220ms ease;
 }
 
-/* ===== presets: force consistent grid on phone + desktop ===== */
+/* presets: simple grid, consistent */
 .presetRow{
   display:grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -165,16 +163,15 @@ button, input{
   padding: 11px 12px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: rgba(255,255,255,0.78);
+  background: var(--paper);
   cursor:pointer;
   font-weight: 750;
-  box-shadow: 0 10px 20px rgba(0,0,0,0.06);
   text-align:center;
 }
 
 .pill.active{
-  border-color: rgba(255,140,60,0.65);
-  box-shadow: 0 0 0 3px rgba(255,150,80,0.20), 0 10px 22px rgba(0,0,0,0.08);
+  border-color: rgba(47,108,255,0.65);
+  box-shadow: 0 0 0 3px var(--blueSoft);
 }
 
 .inputRow{
@@ -187,8 +184,8 @@ button, input{
   padding: 12px 12px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: rgba(255,255,255,0.88);
-  font-size: 16px; /* IMPORTANT: prevents iOS zoom-on-focus */
+  background: var(--paper);
+  font-size: 16px; /* prevents iOS zoom */
   outline: none;
 }
 
@@ -196,7 +193,7 @@ button, input{
   padding: 12px 12px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: rgba(255,255,255,0.70);
+  background: var(--paper);
   cursor:pointer;
 }
 
@@ -205,13 +202,17 @@ button, input{
   margin-top: 12px;
   padding: 14px 14px;
   border-radius: 16px;
-  border: 1px solid rgba(0,0,0,0.10);
-  background: linear-gradient(180deg, rgba(255, 158, 78, 0.95), rgba(255, 118, 58, 0.95));
-  color: rgba(10,10,10,0.92);
+  border: 1px solid rgba(0,0,0,0.18);
+  background: var(--paper);
+  color: var(--ink);
   font-weight: 850;
-  letter-spacing: 0.2px;
   cursor:pointer;
-  box-shadow: 0 16px 34px rgba(0,0,0,0.18), 0 0 26px rgba(255,170,90,0.25);
+  box-shadow: var(--shadow);
+}
+
+.payBtn:active{
+  transform: translateY(1px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.10);
 }
 
 .payBtn:disabled{
@@ -220,34 +221,28 @@ button, input{
   box-shadow: none;
 }
 
-.fineprint{
+.statusRow{
   margin-top: 10px;
+  display:flex;
+  justify-content:space-between;
   font-size: 12px;
-  line-height: 1.35;
-  color: rgba(0,0,0,0.55);
+  padding-top: 10px;
+  border-top: 1px solid rgba(0,0,0,0.10);
 }
 
-.tiny{
-  font-size: 12px;
-  color: rgba(0,0,0,0.62);
-  line-height: 1.35;
-}
-
-/* modal */
+/* modal: flat */
 .modal{
   position: fixed;
   inset: 0;
   display:none;
   z-index: 50;
 }
-
 .modal[aria-hidden="false"]{ display:block; }
 
 .modalBackdrop{
   position:absolute;
   inset:0;
   background: rgba(0,0,0,0.35);
-  backdrop-filter: blur(4px);
 }
 
 .modalCard{
@@ -256,8 +251,8 @@ button, input{
   top: 16%;
   transform: translateX(-50%);
   width: min(420px, calc(100% - 24px));
-  background: rgba(255,255,255,0.92);
-  border: 1px solid rgba(0,0,0,0.12);
+  background: var(--paper);
+  border: 1px solid var(--line);
   border-radius: 18px;
   box-shadow: var(--shadow);
   padding: 12px;
@@ -273,7 +268,6 @@ button, input{
 
 .modalTitle{
   font-weight: 850;
-  letter-spacing: 0.2px;
 }
 
 .modalBody{
@@ -286,13 +280,13 @@ button, input{
   width:100%;
   padding: 12px 14px;
   border-radius: 14px;
-  border: 1px solid rgba(0,0,0,0.12);
-  background: rgba(255, 180, 120, 0.35);
+  border: 1px solid rgba(0,0,0,0.18);
+  background: var(--paper);
   cursor:pointer;
   font-weight: 800;
+  box-shadow: 0 8px 20px rgba(0,0,0,0.10);
 }
 
-/* phone-specific tightening so it doesn’t look “too big” */
 @media (max-width: 380px){
   .card{ padding: 12px; }
   .presetRow{ gap: 8px; }
