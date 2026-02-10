@@ -1,8 +1,9 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
-console.log("VERSION:", 18.0, Date.now());
+
 console.log("shrine.js loaded OK");
+console.log("VERSION: target18", Date.now());
 
 // ====== CONFIG ======
 const BASE = "/gongdewuliang";
@@ -30,7 +31,7 @@ renderer.toneMappingExposure = 1.1;
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x07070a);
 
-// ✅ far plane bigger so giant objects don’t vanish
+// ✅ far plane increased so huge objects don’t vanish
 const camera = new THREE.PerspectiveCamera(45, 1, 0.05, 2000);
 camera.position.set(0, 1.2, 3.2);
 
@@ -39,20 +40,19 @@ controls.enableDamping = true;
 controls.target.set(0, 1.0, 0);
 controls.update();
 
-// ---- Lights (altar vibe) ----
-scene.add(new THREE.AmbientLight(0xffffff, 0.18));
+// ---- Lights (keep simple + stable) ----
+scene.add(new THREE.AmbientLight(0xffffff, 0.25));
 
-const key = new THREE.SpotLight(0xffe0c0, 2.6, 30, Math.PI * 0.22, 0.5, 1.0);
-key.position.set(1.8, 3.6, 2.4);
-key.target.position.set(0, 1.0, 0);
-scene.add(key, key.target);
+const key = new THREE.DirectionalLight(0xffffff, 1.1);
+key.position.set(3, 5, 2);
+scene.add(key);
 
-const fill = new THREE.DirectionalLight(0xb7c9ff, 0.55);
-fill.position.set(-2.5, 2.0, -2.0);
+const fill = new THREE.DirectionalLight(0xb7c9ff, 0.35);
+fill.position.set(-3, 2, -2);
 scene.add(fill);
 
-const candle = new THREE.PointLight(0xffb07a, 0.6, 8);
-candle.position.set(0.0, 0.9, 1.0);
+const candle = new THREE.PointLight(0xffb07a, 0.25, 12);
+candle.position.set(0.0, 1.2, 1.2);
 scene.add(candle);
 
 // ---- Pedestal ----
@@ -65,7 +65,7 @@ scene.add(pedestal);
 
 // ---- Ground ----
 const ground = new THREE.Mesh(
-  new THREE.PlaneGeometry(40, 40),
+  new THREE.PlaneGeometry(80, 80),
   new THREE.MeshStandardMaterial({ color: 0x07060a, roughness: 1 })
 );
 ground.rotation.x = -Math.PI / 2;
@@ -120,10 +120,15 @@ let godObj = null;
 objLoader.load(
   PATHS.obj,
   (obj) => {
+    // Apply material
     obj.traverse((child) => {
-      if (child && child.isMesh) child.material = godMaterial;
+      if (child && child.isMesh) {
+        child.material = godMaterial;
+        if (child.geometry) child.geometry.computeVertexNormals();
+      }
     });
 
+    // Bounds
     const box = new THREE.Box3().setFromObject(obj);
     const size = new THREE.Vector3();
     box.getSize(size);
@@ -132,29 +137,36 @@ objLoader.load(
 
     console.log("[obj] bbox size:", size, "center:", center);
 
+    // Center at origin
     obj.position.sub(center);
+
+    // Lift above pedestal
     obj.position.y += 1.0;
 
+    // BIGGER scale
     const maxDim = Math.max(size.x, size.y, size.z);
-
-    // ✅ MAKE IT WAY BIGGER
-    const target = 18.0; // was 1.4
+    const target = 18.0; // ✅ huge
     const s = target / (maxDim || 1);
     obj.scale.setScalar(s);
+
+    console.log("[obj] SCALE APPLIED:", s, "target:", target, "maxDim:", maxDim);
 
     obj.rotation.y = Math.PI;
 
     scene.add(obj);
     godObj = obj;
 
+    // ✅ Force consistent view so size changes are visible
+    controls.reset();
     controls.target.set(0, 1.0, 0);
-    controls.update();
 
-    // ✅ Pull camera back so the big model fits
-    camera.position.set(0, 4.0, 30.0);
+    // Camera pulled back for target ~18
+    camera.position.set(0, 6.0, 32.0);
     camera.lookAt(0, 1.0, 0);
 
-    console.log("[obj] loaded + BIG:", PATHS.obj);
+    controls.update();
+
+    console.log("[obj] loaded + HUGE:", PATHS.obj);
   },
   undefined,
   (err) => console.error("[obj] FAILED:", err)
@@ -211,7 +223,10 @@ document.getElementById("test-donate").addEventListener("click", () => {
 // ====== RENDER LOOP ======
 renderer.setAnimationLoop(() => {
   controls.update();
+
   if (godObj) godObj.rotation.y += 0.0012;
-  candle.intensity = 0.55 + Math.random() * 0.12;
+
+  candle.intensity = 0.22 + Math.random() * 0.08;
+
   renderer.render(scene, camera);
 });
