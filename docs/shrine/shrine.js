@@ -268,7 +268,7 @@ function spawnMini({ username, amount }) {
   mini.position.set(0, (-templateSize.y * miniScale) * 0.02, 0.12);
 
   // tiny random yaw for hand-made feel
-  mini.rotation.set(0, Math.PI + (Math.random() - 0.5) * 0.12, 0);
+  mini.rotation.set(0, (Math.random() - 0.5) * 0.12, 0);
 
   const group = new THREE.Group();
   group.add(niche);
