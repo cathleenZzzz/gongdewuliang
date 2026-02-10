@@ -15,8 +15,8 @@ const closeBtn = $("closeBtn");
 const LS_USER = "gongde_user_v2";
 
 // ===== Supabase (we'll fill later in Step 5) =====
-const SUPABASE_URL = "";      // e.g. "https://xxxx.supabase.co"
-const SUPABASE_ANON_KEY = ""; // public anon key
+const SUPABASE_URL = "https://gsmkpxxjzrtpdvgocbex.supabase.co";      // e.g. "https://xxxx.supabase.co"
+const SUPABASE_ANON_KEY = "sb_publishable_bUv7a7CgIOiIMRHjMhIAFg_8W_IHlGw"; // public anon key
 
 function makeUser() {
   const a = Math.random().toString(16).slice(2, 6).toUpperCase();
