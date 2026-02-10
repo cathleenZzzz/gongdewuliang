@@ -13,18 +13,41 @@
 html,body{
   height:100%;
   margin:0;
-  background:
-    radial-gradient(900px 600px at 50% -10%, rgba(255,190,110,0.35), rgba(255,255,255,0) 60%),
-    var(--bg);
+
+  /* IMPORTANT: stop iOS Safari from “helpfully” resizing text */
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+
+  background: var(--bg);
   color: var(--ink);
   font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+
+  /* prevent rubber-band white gaps from looking broken */
+  overscroll-behavior: none;
+}
+
+button, input{
+  font: inherit;
+  color: inherit;
+  border: none;
+  background: none;
+
+  /* IMPORTANT: remove native iOS styles */
+  -webkit-appearance: none;
+  appearance: none;
 }
 
 .phone{
-  max-width: 420px;
+  /* Looks like a “terminal” on desktop; still fits on phone */
+  width: min(420px, 100%);
   margin: 0 auto;
   min-height: 100vh;
-  padding: 14px 12px 22px;
+
+  /* safe-area padding for notches */
+  padding:
+    calc(14px + env(safe-area-inset-top))
+    12px
+    calc(22px + env(safe-area-inset-bottom));
 }
 
 .topbar{
@@ -36,8 +59,8 @@ html,body{
 }
 
 .title{
-  font-weight: 650;
-  letter-spacing: 0.3px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
   opacity: 0.92;
 }
 
@@ -46,14 +69,13 @@ html,body{
   height: 38px;
   border-radius: 12px;
   border: 1px solid var(--line);
-  background: rgba(255,255,255,0.8);
-  color: var(--ink);
-  font-size: 22px;
-  line-height: 1;
+  background: rgba(255,255,255,0.85);
   display:grid;
   place-items:center;
   box-shadow: 0 8px 18px rgba(0,0,0,0.06);
   cursor:pointer;
+  font-size: 22px;
+  line-height: 1;
 }
 
 .sheet{
@@ -63,9 +85,7 @@ html,body{
 }
 
 .card{
-  background:
-    radial-gradient(800px 500px at 20% 0%, rgba(255, 215, 150, 0.35), rgba(255,255,255,0) 55%),
-    var(--paper);
+  background: var(--paper);
   border: 1px solid var(--line);
   border-radius: 18px;
   padding: 14px;
@@ -92,7 +112,7 @@ html,body{
 
 .value{
   font-size: 14px;
-  font-weight: 600;
+  font-weight: 650;
 }
 
 .mono{
@@ -115,7 +135,7 @@ html,body{
 .muted{ color: var(--muted); }
 
 .bar{
-  margin: 8px 0 8px;
+  margin: 8px 0;
   height: 10px;
   border-radius: 999px;
   background: rgba(0,0,0,0.08);
@@ -132,23 +152,24 @@ html,body{
   transition: width 220ms ease;
 }
 
+/* ===== presets: force consistent grid on phone + desktop ===== */
 .presetRow{
-  display:flex;
-  flex-wrap:wrap;
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
   margin: 10px 0 12px;
 }
 
 .pill{
-  flex: 1 1 28%;
-  min-width: 90px;
-  padding: 10px 12px;
+  width: 100%;
+  padding: 11px 12px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: rgba(255,255,255,0.72);
+  background: rgba(255,255,255,0.78);
   cursor:pointer;
-  font-weight: 650;
+  font-weight: 750;
   box-shadow: 0 10px 20px rgba(0,0,0,0.06);
+  text-align:center;
 }
 
 .pill.active{
@@ -166,8 +187,8 @@ html,body{
   padding: 12px 12px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: rgba(255,255,255,0.82);
-  font-size: 16px;
+  background: rgba(255,255,255,0.88);
+  font-size: 16px; /* IMPORTANT: prevents iOS zoom-on-focus */
   outline: none;
 }
 
@@ -175,7 +196,7 @@ html,body{
   padding: 12px 12px;
   border-radius: 14px;
   border: 1px solid var(--line);
-  background: rgba(255,255,255,0.62);
+  background: rgba(255,255,255,0.70);
   cursor:pointer;
 }
 
@@ -186,8 +207,8 @@ html,body{
   border-radius: 16px;
   border: 1px solid rgba(0,0,0,0.10);
   background: linear-gradient(180deg, rgba(255, 158, 78, 0.95), rgba(255, 118, 58, 0.95));
-  color: rgba(10,10,10,0.90);
-  font-weight: 800;
+  color: rgba(10,10,10,0.92);
+  font-weight: 850;
   letter-spacing: 0.2px;
   cursor:pointer;
   box-shadow: 0 16px 34px rgba(0,0,0,0.18), 0 0 26px rgba(255,170,90,0.25);
@@ -220,9 +241,7 @@ html,body{
   z-index: 50;
 }
 
-.modal[aria-hidden="false"]{
-  display:block;
-}
+.modal[aria-hidden="false"]{ display:block; }
 
 .modalBackdrop{
   position:absolute;
@@ -253,7 +272,7 @@ html,body{
 }
 
 .modalTitle{
-  font-weight: 800;
+  font-weight: 850;
   letter-spacing: 0.2px;
 }
 
@@ -270,5 +289,12 @@ html,body{
   border: 1px solid rgba(0,0,0,0.12);
   background: rgba(255, 180, 120, 0.35);
   cursor:pointer;
-  font-weight: 750;
+  font-weight: 800;
+}
+
+/* phone-specific tightening so it doesn’t look “too big” */
+@media (max-width: 380px){
+  .card{ padding: 12px; }
+  .presetRow{ gap: 8px; }
+  .pill{ padding: 10px 10px; }
 }
