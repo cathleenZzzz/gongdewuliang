@@ -5,8 +5,8 @@ import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
 console.log("shrine.js loaded OK");
 
 // ====== CONFIG ======
-const BASE = "/gongdewuliang";
-const MODEL_DIR = `${BASE}/models/gen_god/`;
+const BASE = "/gongdewuliang"; // repo name
+const MODEL_DIR = `${BASE}/assets/models/gen_god/`;
 
 const PATHS = {
   obj: `${MODEL_DIR}base.obj`,
@@ -37,7 +37,7 @@ const controls = new OrbitControls(camera, canvas);
 controls.enableDamping = true;
 controls.target.set(0, 1.0, 0);
 
-// Lights
+// Lights (altar vibe)
 scene.add(new THREE.AmbientLight(0xffffff, 0.18));
 
 const key = new THREE.SpotLight(0xffe0c0, 2.6, 20, Math.PI * 0.22, 0.5, 1.0);
@@ -113,7 +113,6 @@ const godMaterial = new THREE.MeshStandardMaterial({
 });
 
 const objLoader = new OBJLoader(manager);
-
 let godObj = null;
 
 objLoader.load(
@@ -125,6 +124,7 @@ objLoader.load(
       if (child.isMesh) child.material = godMaterial;
     });
 
+    // OBJ scale is unpredictable — tweak if needed
     obj.scale.setScalar(0.01);
     obj.position.set(0, 0.45, 0);
     obj.rotation.y = Math.PI;
@@ -178,6 +178,7 @@ function onDonationEvent({ username, amount }) {
   speak(`感谢善信 ${username}，供奉 ${amount} 元。功德无量，福报增长。`);
 }
 
+// Debug button
 document.getElementById("test-donate").addEventListener("click", () => {
   const username = "善信_" + Math.random().toString(16).slice(2, 6).toUpperCase();
   const amount = (Math.random() * 90 + 1).toFixed(2);
@@ -187,9 +188,7 @@ document.getElementById("test-donate").addEventListener("click", () => {
 // Render loop
 renderer.setAnimationLoop(() => {
   controls.update();
-
   if (godObj) godObj.rotation.y += 0.0012;
   candle.intensity = 0.55 + Math.random() * 0.12;
-
   renderer.render(scene, camera);
 });
