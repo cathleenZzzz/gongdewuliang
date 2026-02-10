@@ -41,6 +41,21 @@ const MAIN = {
 const canvas = document.getElementById("scene");
 const testBtn = document.getElementById("test-donate");
 
+const fsBtn = document.getElementById("enterFullscreen");
+
+function requestFullscreen(){
+  const el = document.documentElement;
+
+  if (el.requestFullscreen) el.requestFullscreen();
+  else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen(); // iOS Safari
+}
+
+fsBtn?.addEventListener("click", () => {
+  requestFullscreen();
+  fsBtn.remove(); // one-time only
+});
+
+
 // ====== AUDIO (default ON) ======
 function speak(text) {
   if (!("speechSynthesis" in window)) return;
