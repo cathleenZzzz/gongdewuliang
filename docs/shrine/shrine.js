@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
 
-console.log("SHRINE JS — rotate main + solid mini wall", Date.now());
+console.log("SHRINE JS — white bg + bigger spaced minis", Date.now());
 
 // ====== CONFIG ======
 const BASE = "/gongdewuliang";
@@ -20,21 +20,21 @@ const PATHS = {
 };
 
 const BLESS_MS = 60_000;  // minis last 1 minute
-const FADE_MS = 5000;     // fade over last 5s (set 0 for instant vanish)
+const FADE_MS = 5000;     // fade over last 5s (0 = instant)
 
-// Wall layout (spread out + behind main)
+// ✅ Wall layout: more spacing, fewer columns so it looks clean
 const WALL = {
-  cols: 18,
-  rows: 10,
-  spacingX: 2.1,
-  spacingY: 2.0,
+  cols: 14,
+  rows: 7,
+  spacingX: 3.2,
+  spacingY: 3.0,
   z: -36.0,
   y0: 1.2,
 };
 
 const MAIN = {
   targetSize: 18.0,
-  rotateSpeed: 0.55, // radians/sec
+  rotateSpeed: 0.55,
 };
 
 // ====== DOM ======
@@ -52,11 +52,7 @@ function speak(text) {
 }
 
 // ====== THREE SETUP ======
-const renderer = new THREE.WebGLRenderer({
-  canvas,
-  antialias: true,
-  alpha: true,
-});
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -117,7 +113,7 @@ const mainMat = new THREE.MeshStandardMaterial({
   metalness: 0.08,
 });
 
-// Mini material: SOLID gold-ish, not pastel
+// Minis: warm gold-ish and solid
 function makeMiniMaterial() {
   const m = new THREE.MeshStandardMaterial({
     color: 0xffe3b0,
@@ -165,7 +161,7 @@ function placeMiniInGrid(miniGroup, index) {
 
   miniGroup.position.set(x, y, z);
 
-  // ✅ FIX: face same direction as main (remove the 180° flip)
+  // ✅ face forward
   miniGroup.rotation.set(0, (Math.random() - 0.5) * 0.12, 0);
 }
 
@@ -194,8 +190,8 @@ function spawnMini({ username, amount }) {
 
   const mini = cloneAsMini(godTemplate);
 
-  // ✅ CHANGE: make minis bigger
-  const miniScale = mainScale * 0.34; // try 0.30–0.40
+  // ✅ bigger minis
+  const miniScale = mainScale * 0.44; // try 0.40–0.52
   mini.scale.setScalar(miniScale);
 
   placeMiniInGrid(mini, nextMiniIndex++);
@@ -255,11 +251,9 @@ window.gongdeDonate = function gongdeDonate({ username, amount }) {
   spawnMini({ username: String(username), amount: String(amount) });
 };
 
-// ===== Supabase Realtime: receive phone donations =====
+// ===== Supabase Realtime =====
 async function startRealtime() {
-  const { createClient } = await import(
-    "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm"
-  );
+  const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm");
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   supabase
@@ -275,26 +269,24 @@ async function startRealtime() {
 }
 startRealtime();
 
-// Local testing fallback (optional)
+// optional same-device testing
 const chan = ("BroadcastChannel" in window) ? new BroadcastChannel("gongde") : null;
 if (chan) {
   chan.onmessage = (ev) => {
     const msg = ev.data;
     if (!msg || msg.type !== "donation") return;
-    window.gongdeDonate({
-      username: msg.username || "善信",
-      amount: msg.amount || "0",
-    });
+    window.gongdeDonate({ username: msg.username || "善信", amount: msg.amount || "0" });
   };
 }
 
+// Test button
 testBtn?.addEventListener("click", () => {
   const username = "善信_" + Math.random().toString(16).slice(2, 6).toUpperCase();
   const amount = (Math.random() * 90 + 1).toFixed(2);
   window.gongdeDonate({ username, amount });
 });
 
-// ====== Resize ======
+// Resize
 function resize() {
   const w = canvas.clientWidth;
   const h = canvas.clientHeight;
@@ -305,7 +297,7 @@ function resize() {
 window.addEventListener("resize", resize);
 resize();
 
-// ====== Render loop ======
+// Render loop
 const clock = new THREE.Clock();
 renderer.setAnimationLoop(() => {
   const dt = clock.getDelta();
