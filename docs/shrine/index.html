@@ -15,12 +15,17 @@
   }
   </script>
 </head>
+
 <body>
   <div id="app">
+    <!-- 2D wall behind -->
+    <div id="buddha-wall" aria-hidden="true"></div>
+
+    <!-- 3D idol over wall -->
     <canvas id="scene"></canvas>
 
-    <!-- Keep only test donation -->
-    <button id="test-donate" aria-label="Test donation">+ Test Donation</button>
+    <!-- Keep test donation -->
+    <button id="test-donate">+ Test Donation</button>
   </div>
 
   <script type="module" src="./shrine.js"></script>
