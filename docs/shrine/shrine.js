@@ -27,9 +27,9 @@ const FADE_MS = 5000;     // fade over last 5s (set 0 for instant vanish)
 const WALL = {
   cols: 18,
   rows: 10,
-  spacingX: 2.1,     // <-- bigger spacing (fix overlap)
-  spacingY: 2.0,
-  z: -36.0,          // <-- push further back (fix messy rendering)
+  spacingX: 2.4,   // was 2.1
+  spacingY: 2.3,   // was 2.0
+  z: -36.0,
   y0: 1.2,
 };
 
