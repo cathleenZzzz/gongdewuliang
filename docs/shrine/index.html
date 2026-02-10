@@ -6,7 +6,6 @@
   <title>功德 Shrine</title>
   <link rel="stylesheet" href="./shrine.css" />
 
-  <!-- Import map so "three" works on GitHub Pages -->
   <script type="importmap">
   {
     "imports": {
@@ -20,20 +19,8 @@
   <div id="app">
     <canvas id="scene"></canvas>
 
-    <div id="collage">
-      <!-- Put these files in: docs/assets/images/ -->
-      <img class="scrap" src="/gongdewuliang/assets/images/scrap1.png" alt="" />
-      <img class="scrap" src="/gongdewuliang/assets/images/scrap2.png" alt="" />
-      <div class="stamp">功德无量</div>
-    </div>
-
-    <div id="wall">
-      <div id="wall-title">千佛墙 / 1-minute blessings</div>
-      <div id="tiles"></div>
-    </div>
-
-    <button id="enable-audio">🔊 Enable Blessings Audio</button>
-    <button id="test-donate">+ Test Donation</button>
+    <!-- Keep only test donation -->
+    <button id="test-donate" aria-label="Test donation">+ Test Donation</button>
   </div>
 
   <script type="module" src="./shrine.js"></script>
