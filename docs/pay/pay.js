@@ -1,7 +1,7 @@
 const SUPABASE_URL = "https://gsmkpxxjzrtpdvgocbex.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_bUv7a7CgIOiIMRHjMhIAFg_8W_IHlGw";
 
-console.log("PAY.JS VERSION: ADS_FIXED_1", Date.now());
+console.log("PAY.JS VERSION: NO_OUTCOME_MODAL + ADS", Date.now());
 
 const usernameEl = document.getElementById("username");
 const totalEl = document.getElementById("total");
@@ -32,7 +32,6 @@ let total = 0;
 renderProgress();
 setStatus("ready");
 
-// ===== helpers =====
 function setStatus(msg){ statusEl.textContent = msg; }
 function clamp(n,a,b){ return Math.max(a, Math.min(b, n)); }
 function fmt(n){ return Number(n).toLocaleString("en-US"); }
@@ -47,7 +46,7 @@ function renderProgress(){
   remainingEl.textContent = fmt(remaining);
 }
 
-// ===== username generator (wide pool; Chinese allowed, UI stays non-Chinese) =====
+// ===== username generator =====
 function choice(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
 
 function makeUsername(){
@@ -105,16 +104,8 @@ function getAmount(){
   return Math.max(0, Math.floor(n));
 }
 
-// ===== modal (two modes: "milestone" resets, "ad" doesn't) =====
-let modalMode = "milestone"; // "milestone" | "ad"
-
-function openModalText(text, mode = "milestone"){
-  modalMode = mode;
-  modalBody.textContent = text;
-  modal.setAttribute("aria-hidden", "false");
-}
-function openModalHtml(html, mode = "ad"){
-  modalMode = mode;
+// ===== modal: ONLY ADS use this now =====
+function openModalHtml(html){
   modalBody.innerHTML = html;
   modal.setAttribute("aria-hidden", "false");
 }
@@ -122,22 +113,13 @@ function closeModal(){
   modal.setAttribute("aria-hidden", "true");
 }
 
-function resetProgress(){
-  total = 0;
-  renderProgress();
-  amountInput.value = "";
-  pills.forEach(x => x.classList.remove("active"));
-  setStatus("ready");
-}
-
-function handleModalClose(){
+// close handlers (no progress reset on close)
+function handleClose(){
   closeModal();
-  if (modalMode === "milestone") resetProgress();
 }
-
-modalClose.addEventListener("click", handleModalClose);
-modalX.addEventListener("click", handleModalClose);
-modalOk.addEventListener("click", handleModalClose);
+modalClose?.addEventListener("click", handleClose);
+modalX?.addEventListener("click", handleClose);
+modalOk?.addEventListener("click", handleClose);
 
 // ===== Supabase client =====
 let supabase = null;
@@ -162,8 +144,6 @@ payBtn.addEventListener("click", async () => {
     const safeUsername =
       (typeof username === "string" && username.trim()) ? username.trim() : makeUsername();
 
-    console.log("[PAY] inserting:", { safeUsername, amt });
-
     const { error } = await sb.from("donations").insert({
       username: safeUsername,
       amount: amt,
@@ -177,25 +157,23 @@ payBtn.addEventListener("click", async () => {
     renderProgress();
     setStatus("accepted");
 
-    // optional same-device shrine ping
+    // same-device shrine ping
     if ("BroadcastChannel" in window) {
       const ch = new BroadcastChannel("gongde");
       ch.postMessage({ type: "donation", username: safeUsername, amount: String(amt) });
       ch.close();
     }
 
-    // milestone popup (this one resets progress when closed)
-    if (total >= TARGET) {
-      openModalText(
-        "You have reached a new tier of stability. " +
-        "Expect improved timing, better decisions, and a smoother path forward. " +
-        "Maintain alignment to preserve momentum.",
-        "milestone"
-      );
-    }
-
     amountInput.value = "";
     pills.forEach(x => x.classList.remove("active"));
+
+    // ✅ milestone behavior changed: NO POPUP, just reset when reached
+    if (total >= TARGET) {
+      total = 0;
+      renderProgress();
+      setStatus("tier reset");
+    }
+
   } catch (e){
     console.error(e);
     setStatus("error — try again");
@@ -204,39 +182,35 @@ payBtn.addEventListener("click", async () => {
   }
 });
 
-// ===== UGLY AD POPUPS (every 20–40s, random) =====
-let adTimer = null;
-
+// ===== UGLY ADS (20–40s random), never stack =====
 function scheduleAd(){
   const ms = randInt(20_000, 40_000);
-  adTimer = setTimeout(() => {
+  setTimeout(() => {
     showAd();
     scheduleAd();
   }, ms);
 }
 
 function showAd(){
-  // do not stack on top of milestone/other popup
+  // don’t stack popups
   if (modal.getAttribute("aria-hidden") === "false") return;
 
   const offer = randInt(88, 988);
 
   openModalHtml(`
     <div class="ad-wrap">
-      <div class="ad-line" style="text-align:center;">
+      <div class="ad-line ad-top">
         Advance to improve outcomes.<br/>
         Maintain alignment to keep momentum.
       </div>
 
-      <div class="ad-line ad-amount">
-        $${offer}
-      </div>
+      <div class="ad-line ad-amount">$${offer}</div>
 
       <button class="ad-cta" id="adCtaBtn">
         MAKE OFFERING + PROGRESS FORTH
       </button>
     </div>
-  `, "ad");
+  `);
 
   document.getElementById("adCtaBtn")?.addEventListener("click", () => {
     closeModal();
@@ -246,9 +220,11 @@ function showAd(){
 
 scheduleAd();
 
-// top buttons
+// back button
 document.getElementById("backBtn")?.addEventListener("click", () => history.back());
-document.getElementById("warnBtn")?.addEventListener("click", () => {
-  // keep as non-resetting info popup
-  openModalText("This terminal records commitments and reflects progress in real time.", "ad");
+
+// ✅ remove the warn button behavior entirely (prevents “outcome update” popup)
+document.getElementById("warnBtn")?.addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
 });
