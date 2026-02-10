@@ -1,7 +1,7 @@
 const SUPABASE_URL = "https://gsmkpxxjzrtpdvgocbex.supabase.co";
 const SUPABASE_ANON_KEY = "sb_publishable_bUv7a7CgIOiIMRHjMhIAFg_8W_IHlGw";
 
-console.log("PAY.JS VERSION: NO_OUTCOME_MODAL + ADS", Date.now());
+console.log("PAY.JS VERSION: REDBOX_MODAL_ONLY + ADS + MILESTONE", Date.now());
 
 const usernameEl = document.getElementById("username");
 const totalEl = document.getElementById("total");
@@ -23,30 +23,31 @@ const modalOk = document.getElementById("modalOk");
 
 const TARGET = 88888;
 
-// ===== identity (NEW every reload) =====
-const username = makeUsername();
-usernameEl.textContent = username;
-
-// ===== progress (session only) =====
-let total = 0;
-renderProgress();
-setStatus("ready");
-
-function setStatus(msg){ statusEl.textContent = msg; }
+// ---------- helpers ----------
+function setStatus(msg){ if (statusEl) statusEl.textContent = msg; }
 function clamp(n,a,b){ return Math.max(a, Math.min(b, n)); }
 function fmt(n){ return Number(n).toLocaleString("en-US"); }
 function randInt(min, max){ return Math.floor(min + Math.random() * (max - min + 1)); }
 
+// ---------- identity (NEW each reload) ----------
+const username = makeUsername();
+if (usernameEl) usernameEl.textContent = username;
+
+// ---------- progress (session only) ----------
+let total = 0;
+renderProgress();
+setStatus("ready");
+
 function renderProgress(){
-  totalEl.textContent = fmt(total);
+  if (totalEl) totalEl.textContent = fmt(total);
   const pct = clamp((total / TARGET) * 100, 0, 100);
-  pctEl.textContent = String(Math.floor(pct));
-  fillEl.style.width = `${pct}%`;
+  if (pctEl) pctEl.textContent = String(Math.floor(pct));
+  if (fillEl) fillEl.style.width = `${pct}%`;
   const remaining = Math.max(0, TARGET - total);
-  remainingEl.textContent = fmt(remaining);
+  if (remainingEl) remainingEl.textContent = fmt(remaining);
 }
 
-// ===== username generator =====
+// ---------- username generator ----------
 function choice(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
 
 function makeUsername(){
@@ -76,7 +77,7 @@ function makeUsername(){
   return `${choice(prefix)}${choice(core)}${choice(join)}${choice(num)}${choice(mark)}`;
 }
 
-// ===== presets & input =====
+// ---------- presets & input ----------
 pills.forEach((p) => {
   p.addEventListener("click", () => {
     pills.forEach(x => x.classList.remove("active"));
@@ -90,7 +91,7 @@ amountInput.addEventListener("input", () => {
   amountInput.value = amountInput.value.replace(/[^\d]/g, "");
 });
 
-maxBtn.addEventListener("click", () => {
+maxBtn?.addEventListener("click", () => {
   const need = clamp(TARGET - total, 0, 999999);
   amountInput.value = String(need || 0);
   amountInput.focus();
@@ -104,24 +105,53 @@ function getAmount(){
   return Math.max(0, Math.floor(n));
 }
 
-// ===== modal: ONLY ADS use this now =====
-function openModalHtml(html){
-  modalBody.innerHTML = html;
+// ---------- modal: RED BOX ONLY ----------
+let modalLock = false; // prevents ads + milestone colliding
+
+function openRedBox({ lineTop, amountText, ctaText, showClose = true }){
+  // stop stacking / flicker
+  if (modalLock) return;
+  modalLock = true;
+
+  // make outer chrome irrelevant: we hide it via CSS too
+  modalBody.innerHTML = `
+    <div class="ad-wrap">
+      <div class="ad-line ad-top">${escapeHtml(lineTop).replace(/\n/g,"<br/>")}</div>
+      <div class="ad-line ad-amount">${escapeHtml(amountText)}</div>
+      <button class="ad-cta" id="adCtaBtn">${escapeHtml(ctaText)}</button>
+      ${showClose ? `<button class="ad-close" id="adCloseBtn">X</button>` : ``}
+    </div>
+  `;
   modal.setAttribute("aria-hidden", "false");
+
+  document.getElementById("adCtaBtn")?.addEventListener("click", () => {
+    closeModal();
+    amountInput?.focus?.();
+  }, { once: true });
+
+  document.getElementById("adCloseBtn")?.addEventListener("click", () => {
+    closeModal();
+  }, { once: true });
 }
+
 function closeModal(){
   modal.setAttribute("aria-hidden", "true");
+  // small delay so next popup doesn't instantly replace + look “overlaid”
+  setTimeout(() => { modalLock = false; }, 150);
 }
 
-// close handlers (no progress reset on close)
-function handleClose(){
-  closeModal();
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, (c) => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;"
+  }[c]));
 }
-modalClose?.addEventListener("click", handleClose);
-modalX?.addEventListener("click", handleClose);
-modalOk?.addEventListener("click", handleClose);
 
-// ===== Supabase client =====
+// kill old chrome buttons if they exist in your HTML
+modalClose?.addEventListener("click", (e) => { e.preventDefault(); closeModal(); });
+modalX?.addEventListener("click", (e) => { e.preventDefault(); closeModal(); });
+modalOk?.addEventListener("click", (e) => { e.preventDefault(); closeModal(); });
+
+// ---------- Supabase client ----------
 let supabase = null;
 async function getSupabase(){
   if (supabase) return supabase;
@@ -130,7 +160,7 @@ async function getSupabase(){
   return supabase;
 }
 
-// ===== pay action =====
+// ---------- pay action ----------
 payBtn.addEventListener("click", async () => {
   const amt = getAmount();
   if (!amt) { setStatus("enter an amount"); return; }
@@ -140,9 +170,7 @@ payBtn.addEventListener("click", async () => {
 
   try{
     const sb = await getSupabase();
-
-    const safeUsername =
-      (typeof username === "string" && username.trim()) ? username.trim() : makeUsername();
+    const safeUsername = (username && username.trim()) ? username.trim() : makeUsername();
 
     const { error } = await sb.from("donations").insert({
       username: safeUsername,
@@ -164,16 +192,31 @@ payBtn.addEventListener("click", async () => {
       ch.close();
     }
 
-    amountInput.value = "";
-    pills.forEach(x => x.classList.remove("active"));
-
-    // ✅ milestone behavior changed: NO POPUP, just reset when reached
+    // milestone popup (KEEP THIS)
     if (total >= TARGET) {
-      total = 0;
-      renderProgress();
-      setStatus("tier reset");
+      // stop ads while milestone shows
+      modalLock = false; // allow milestone to open
+      openRedBox({
+        lineTop: "Advance to improve outcomes.\nMaintain alignment to keep momentum.",
+        amountText: "$" + fmt(TARGET),
+        ctaText: "CONTINUE",
+        showClose: true
+      });
+
+      // reset after closing
+      const prevClose = closeModal;
+      closeModal = function(){
+        modal.setAttribute("aria-hidden", "true");
+        total = 0;
+        renderProgress();
+        setStatus("tier reset");
+        setTimeout(() => { modalLock = false; }, 150);
+        closeModal = prevClose; // restore
+      };
     }
 
+    amountInput.value = "";
+    pills.forEach(x => x.classList.remove("active"));
   } catch (e){
     console.error(e);
     setStatus("error — try again");
@@ -182,7 +225,7 @@ payBtn.addEventListener("click", async () => {
   }
 });
 
-// ===== UGLY ADS (20–40s random), never stack =====
+// ---------- ADS (20–40s random), uses same red box ----------
 function scheduleAd(){
   const ms = randInt(20_000, 40_000);
   setTimeout(() => {
@@ -192,30 +235,18 @@ function scheduleAd(){
 }
 
 function showAd(){
-  // don’t stack popups
+  // don’t interrupt milestone or an open modal
   if (modal.getAttribute("aria-hidden") === "false") return;
+  if (modalLock) return;
 
   const offer = randInt(88, 988);
 
-  openModalHtml(`
-    <div class="ad-wrap">
-      <div class="ad-line ad-top">
-        Advance to improve outcomes.<br/>
-        Maintain alignment to keep momentum.
-      </div>
-
-      <div class="ad-line ad-amount">$${offer}</div>
-
-      <button class="ad-cta" id="adCtaBtn">
-        MAKE OFFERING + PROGRESS FORTH
-      </button>
-    </div>
-  `);
-
-  document.getElementById("adCtaBtn")?.addEventListener("click", () => {
-    closeModal();
-    amountInput?.focus?.();
-  }, { once: true });
+  openRedBox({
+    lineTop: "Advance to improve outcomes.\nMaintain alignment to keep momentum.",
+    amountText: "$" + offer,
+    ctaText: "MAKE OFFERING + PROGRESS FORTH",
+    showClose: true
+  });
 }
 
 scheduleAd();
@@ -223,7 +254,7 @@ scheduleAd();
 // back button
 document.getElementById("backBtn")?.addEventListener("click", () => history.back());
 
-// ✅ remove the warn button behavior entirely (prevents “outcome update” popup)
+// disable any “warn” popup handler
 document.getElementById("warnBtn")?.addEventListener("click", (e) => {
   e.preventDefault();
   e.stopPropagation();
