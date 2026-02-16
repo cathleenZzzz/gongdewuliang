@@ -135,8 +135,8 @@ const mainMat = new THREE.MeshStandardMaterial({
   metalnessMap,
 
   // scalars act as multipliers; keep close to your original intent
-  roughness: 0.85,
-  metalness: 0.25, // slightly higher than 0.08 so gold reads better with env
+  roughness: 0.45,
+  metalness: 1.0, // slightly higher than 0.08 so gold reads better with env
 });
 
 // Minis: warm gold-ish and solid (unchanged)
