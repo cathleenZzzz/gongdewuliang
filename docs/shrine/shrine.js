@@ -125,33 +125,37 @@ function loadTex(url, { srgb = false } = {}) {
 const diffuseMap = loadTex(PATHS.diffuse, { srgb: true });
 const normalMap = loadTex(PATHS.normal);
 const roughnessMap = loadTex(PATHS.roughness);
-const metalnessMap = loadTex(PATHS.metallic);
+// still load it if you want to confirm it exists, but DON'T use it:
+// const metalnessMap = loadTex(PATHS.metallic);
 
-// ✅ Use maps primarily; keep your artistic tuning similar.
+// ✅ Gold that works on a simple GitHub Pages scene:
 const mainMat = new THREE.MeshStandardMaterial({
   map: diffuseMap,
   normalMap,
   roughnessMap,
-  metalnessMap,
 
-  // scalars act as multipliers; keep close to your original intent
+  // IMPORTANT: don't let an almost-white metalness map turn it into grey mirror
+  metalness: 0.65,
   roughness: 0.35,
-  metalness: 1.0, // slightly higher than 0.08 so gold reads better with env
+
+  // optional tiny warmth (helps keep gold “gold”)
+  emissive: new THREE.Color(0x2a1706),
+  emissiveIntensity: 0.04,
 });
 
 // Minis: warm gold-ish and solid (unchanged)
-function makeMiniMaterial() {
-  const m = new THREE.MeshStandardMaterial({
-    color: 0xffe3b0,
-    metalness: 0.65,
-    roughness: 0.35,
-    emissive: new THREE.Color(0x2a1a08),
-    emissiveIntensity: 0.15,
-  });
-  m.transparent = false;
-  m.opacity = 1;
-  return m;
-}
+// function makeMiniMaterial() {
+//  const m = new THREE.MeshStandardMaterial({
+//    color: 0xffe3b0,
+//    metalness: 0.65,
+//    roughness: 0.35,
+//    emissive: new THREE.Color(0x2a1a08),
+//    emissiveIntensity: 0.15,
+//  });
+//  m.transparent = false;
+//  m.opacity = 1;
+//  return m;
+//}
 
 const objLoader = new OBJLoader(manager);
 let godObj = null;
