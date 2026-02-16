@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 import { OBJLoader } from "three/addons/loaders/OBJLoader.js";
+import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 
 console.log("SHRINE JS — white bg + bigger spaced minis", Date.now());
 
@@ -17,6 +18,7 @@ const PATHS = {
   normal: `${MODEL_DIR}texture_normal.png`,
   roughness: `${MODEL_DIR}texture_roughness.png`,
   metallic: `${MODEL_DIR}texture_metallic.png`,
+  // pbr: `${MODEL_DIR}texture_pbr.png`, // not used by default (keeps changes minimal)
 };
 
 const BLESS_MS = 60_000;  // minis last 1 minute
@@ -46,8 +48,6 @@ function speak(text) {
   if (!("speechSynthesis" in window)) return;
 
   const u = new SpeechSynthesisUtterance(text);
-
-  // brighter voice settings
   u.rate = 1.08;
   u.pitch = 1.25;
   u.volume = 1.0;
@@ -84,6 +84,14 @@ controls.enablePan = false;
 controls.target.set(0, 8.0, 0);
 controls.update();
 
+// --- ✅ Minimal, file-free environment reflection ---
+// Metals look black without an environment; this fixes "shiny black" immediately.
+{
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  scene.environment = pmrem.fromScene(new RoomEnvironment(renderer), 0.04).texture;
+  pmrem.dispose();
+}
+
 // Lights (slightly warm)
 scene.add(new THREE.AmbientLight(0xffffff, 0.62));
 
@@ -100,6 +108,9 @@ const manager = new THREE.LoadingManager();
 manager.onError = (url) => console.error("[load] failed:", url);
 const texLoader = new THREE.TextureLoader(manager);
 
+// Force correct color space:
+// - Diffuse/BaseColor: sRGB
+// - Normal/Roughness/Metallic: Non-color data
 function loadTex(url, { srgb = false } = {}) {
   const t = texLoader.load(
     url,
@@ -107,7 +118,7 @@ function loadTex(url, { srgb = false } = {}) {
     undefined,
     () => console.warn("[tex] missing:", url)
   );
-  if (srgb) t.colorSpace = THREE.SRGBColorSpace;
+  t.colorSpace = srgb ? THREE.SRGBColorSpace : THREE.NoColorSpace;
   return t;
 }
 
@@ -116,16 +127,19 @@ const normalMap = loadTex(PATHS.normal);
 const roughnessMap = loadTex(PATHS.roughness);
 const metalnessMap = loadTex(PATHS.metallic);
 
+// ✅ Use maps primarily; keep your artistic tuning similar.
 const mainMat = new THREE.MeshStandardMaterial({
   map: diffuseMap,
   normalMap,
   roughnessMap,
   metalnessMap,
+
+  // scalars act as multipliers; keep close to your original intent
   roughness: 0.85,
-  metalness: 0.08,
+  metalness: 0.25, // slightly higher than 0.08 so gold reads better with env
 });
 
-// Minis: warm gold-ish and solid
+// Minis: warm gold-ish and solid (unchanged)
 function makeMiniMaterial() {
   const m = new THREE.MeshStandardMaterial({
     color: 0xffe3b0,
@@ -169,8 +183,6 @@ function placeMiniInGrid(miniGroup, index) {
   const z = WALL.z;
 
   miniGroup.position.set(x, y, z);
-
-  // face forward
   miniGroup.rotation.set(0, (Math.random() - 0.5) * 0.12, 0);
 }
 
@@ -198,8 +210,7 @@ function spawnMini({ username, amount }) {
   }
 
   const mini = cloneAsMini(godTemplate);
-
-  const miniScale = mainScale * 0.44; // try 0.40–0.52
+  const miniScale = mainScale * 0.44; // unchanged
   mini.scale.setScalar(miniScale);
 
   placeMiniInGrid(mini, nextMiniIndex++);
