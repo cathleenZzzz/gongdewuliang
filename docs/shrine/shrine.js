@@ -13,10 +13,10 @@ const SUPABASE_ANON_KEY = "sb_publishable_bUv7a7CgIOiIMRHjMhIAFg_8W_IHlGw";
 
 const PATHS = {
   obj: `${MODEL_DIR}base.obj`,
-  diffuse: `${MODEL_DIR}texture_diffuse.png`,
+  diffuse: `${MODEL_DIR}texture_diffuse.jpg`,
   normal: `${MODEL_DIR}texture_normal.png`,
-  roughness: `${MODEL_DIR}texture_roughness.png`,
-  metallic: `${MODEL_DIR}texture_metallic.png`,
+  roughness: `${MODEL_DIR}texture_roughness.jpg`,
+  metallic: `${MODEL_DIR}texture_metallic.jpg`,
 };
 
 // Minis lifetime
