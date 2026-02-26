@@ -19,6 +19,11 @@ const PATHS = {
   metallic: `${MODEL_DIR}texture_metallic.jpg`,
 };
 
+// ====== MUSIC ======
+// Put your file at: /docs/assets/audio/shrine.mp3  (GitHub Pages => /gongdewuliang/assets/audio/shrine.mp3)
+const MUSIC_URL = `${BASE}/assets/audio/shrine.mp3`;
+const MUSIC_VOLUME = 0.55;
+
 // Minis lifetime
 const BLESS_MS = 60_000;
 const FADE_MS = 5000;
@@ -42,7 +47,64 @@ const MAIN = {
 const canvas = document.getElementById("scene");
 const testBtn = document.getElementById("test-donate");
 
-// ====== AUDIO (default ON) ======
+// ====== BACKGROUND MUSIC (autoplay w/ gesture fallback) ======
+let shrineAudio = null;
+
+function setupShrineMusic() {
+  shrineAudio = new Audio(MUSIC_URL);
+  shrineAudio.loop = true;
+  shrineAudio.preload = "auto";
+  shrineAudio.volume = MUSIC_VOLUME;
+
+  const unlockBtn = document.getElementById("audio-unlock");
+
+  async function tryPlay() {
+    if (!shrineAudio) return;
+    try {
+      await shrineAudio.play();
+      if (unlockBtn) unlockBtn.style.display = "none";
+      console.log("[music] playing:", MUSIC_URL);
+    } catch (e) {
+      // Autoplay blocked — show unlock UI
+      if (unlockBtn) unlockBtn.style.display = "block";
+      console.warn("[music] autoplay blocked; waiting for gesture");
+    }
+  }
+
+  // Try immediately on load
+  tryPlay();
+
+  // Any gesture unlocks audio (mobile Safari / Chrome policies)
+  const unlock = async () => {
+    try {
+      await shrineAudio.play();
+      if (unlockBtn) unlockBtn.style.display = "none";
+      console.log("[music] unlocked by gesture");
+    } catch (e) {
+      // still blocked; keep button visible
+      if (unlockBtn) unlockBtn.style.display = "block";
+    }
+  };
+
+  window.addEventListener("pointerdown", unlock, { once: true });
+  window.addEventListener("touchstart", unlock, { once: true, passive: true });
+  window.addEventListener("keydown", unlock, { once: true });
+  unlockBtn?.addEventListener("click", unlock);
+
+  // Optional: pause when hidden, resume when visible
+  document.addEventListener("visibilitychange", () => {
+    if (!shrineAudio) return;
+    if (document.hidden) {
+      shrineAudio.pause();
+    } else {
+      tryPlay();
+    }
+  });
+}
+
+setupShrineMusic();
+
+// ====== AUDIO (voice) ======
 function pickVoice() {
   const synth = window.speechSynthesis;
   if (!synth || !synth.getVoices) return null;
